@@ -3,6 +3,15 @@ set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
+if [[ ! -d "$DIR/node_modules" || ! -x "$DIR/node_modules/.bin/ts-node" ]]; then
+  if ! command -v npm >/dev/null 2>&1; then
+    echo "npm is required to install dependencies." >&2
+    exit 1
+  fi
+  echo "Installing dependencies..."
+  npm install --prefix "$DIR"
+fi
+
 echo "Preparing local config and data..."
 node --loader ts-node/esm "$DIR/bin/setup.ts" >/dev/null
 DASHBOARD_URL="$(node --loader ts-node/esm "$DIR/bin/dashboard-url.ts")"

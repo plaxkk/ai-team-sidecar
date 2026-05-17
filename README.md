@@ -4,6 +4,35 @@ Local dashboard and auditor for AI-assisted coding teams.
 
 AI Team Sidecar watches conversations from tools like Claude Code and Codex CLI, groups them by local repository, and evaluates execution quality like a lightweight startup operating system:
 
+```text
+Founder / CEO
+|
++-- Company Portfolio
+|   |
+|   +-- Local Repo Project
+|       |
+|       +-- AI Agent Sessions
+|       |   +-- Codex CLI
+|       |   +-- Claude Code
+|       |
+|       +-- Role Quality Lens
+|       |   +-- Product
+|       |   +-- Engineer
+|       |   +-- QA
+|       |   +-- Tech Lead
+|       |
+|       +-- Project PMO Health
+|           +-- Input quality
+|           +-- Process health
+|           +-- Output quality
+|           +-- Delivery confidence
+|
++-- AI Team Sidecar
+    |
+    +-- Collector -> Local SQLite -> Analysis Engine -> Dashboard
+    +-- Audit Findings -> Rule Feedback -> Project .md files -> Next execution loop
+```
+
 - Company / founder operating health
 - Project PMO health
 - Product / RD / QA / Tech Lead role quality
@@ -16,7 +45,6 @@ Everything runs locally by default. Conversation data is stored in your local SQ
 ## Quick Start
 
 ```bash
-npm install
 npm run start
 ```
 
