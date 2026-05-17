@@ -7,7 +7,7 @@
     "codexCli": true
   },
   "privacy": {
-    "storeRawPayload": true,
-    "storeToolOutput": true
+    "storeRawPayload": false,
+    "storeToolOutput": false
   }
 }

@@ -18,6 +18,7 @@ Everything runs locally by default. Conversation data is stored in your local SQ
 ```bash
 npm install
 npm run setup
+npm run doctor
 npm run start
 ```
 
@@ -26,6 +27,8 @@ Open:
 ```text
 http://localhost:4041
 ```
+
+For a first project, edit `~/.ai-team-sidecar/config.json` and set `projects` to the repository paths you want to monitor. Keeping a project allowlist is the simplest way to avoid collecting unrelated local conversations.
 
 ## Configuration
 
@@ -52,8 +55,8 @@ Example:
     "codexCli": true
   },
   "privacy": {
-    "storeRawPayload": true,
-    "storeToolOutput": true
+    "storeRawPayload": false,
+    "storeToolOutput": false
   }
 }
 ```
@@ -69,6 +72,8 @@ PORT=4041
 ```
 
 ## Data Storage
+
+Data is local-first. The repository should contain source code only; runtime databases and transcripts stay outside git.
 
 Default data directory:
 
@@ -220,7 +225,7 @@ Applied patches are appended to the target file. Sidecar does not silently overw
 
 This tool may store prompts, assistant responses, tool inputs, and tool outputs locally.
 
-To reduce stored raw data:
+Default privacy settings avoid storing duplicate raw hook payloads and tool outputs:
 
 ```json
 {
@@ -231,12 +236,27 @@ To reduce stored raw data:
 }
 ```
 
+The `turns` table still stores prompt and assistant text because the dashboard needs it for local diagnostics. Do not commit the data directory. Run this before publishing or pushing:
+
+```bash
+npm run doctor
+git status --short
+```
+
+Open-source safety checklist:
+
+- Keep `~/.ai-team-sidecar/data` or any custom `DATA_DIR` out of the repository.
+- Keep `.env`, SQLite files, JSONL transcripts, Claude exports, and Codex exports untracked.
+- Prefer configuring `projects` so Sidecar only observes intended repositories.
+- Enable `privacy.storeRawPayload` or `privacy.storeToolOutput` only when you explicitly need deeper local diagnostics.
+
 Disabling tool output storage reduces token visibility and diagnostic accuracy.
 
 ## Development
 
 ```bash
 npm run build
+npm run doctor
 npm run dashboard
 npm run daemon
 ```

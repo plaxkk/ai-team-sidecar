@@ -33,8 +33,8 @@ const DEFAULT_CONFIG: SidecarConfig = {
     codexCli: true,
   },
   privacy: {
-    storeRawPayload: true,
-    storeToolOutput: true,
+    storeRawPayload: false,
+    storeToolOutput: false,
   },
 };
 

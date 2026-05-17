@@ -7,6 +7,7 @@
     "build": "tsc",
     "setup": "node --loader ts-node/esm bin/setup.ts",
     "install:claude-hooks": "node --loader ts-node/esm bin/install-claude-hooks.ts",
+    "doctor": "node --loader ts-node/esm bin/doctor.ts",
     "daemon": "node --loader ts-node/esm src/collector/daemon.ts",
     "dashboard": "node --loader ts-node/esm src/dashboard/server.ts",
     "start": "bash bin/start.sh",

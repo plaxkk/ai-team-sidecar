@@ -8,7 +8,7 @@ async function main() {
   const files = findTranscriptFiles();
 
   if (files.length === 0) {
-    console.log('No transcript files found. Looking in ~/.claude/projects/*travelAi*/');
+    console.log('No transcript files found. Looking in ~/.claude/projects for configured project paths.');
     return;
   }
 
