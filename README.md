@@ -1,8 +1,12 @@
 # AI Team Sidecar
 
-Local dashboard and auditor for AI-assisted coding teams.
+Sustainable workflow flywheel for independent developers running an OPC-style AI company.
 
-AI Team Sidecar watches conversations from tools like Claude Code and Codex CLI, groups them by local repository, and evaluates execution quality like a lightweight startup operating system:
+AI Team Sidecar is not just a dashboard. It is built for solo founders and independent developers who operate a personal OPC company with AI agents as the virtual team. It helps you manage local repo projects, improve project rules, audit execution quality, and continuously sharpen the responsibilities of virtual company roles such as Product, RD/Engineer, QA, and Tech Lead.
+
+The product is designed for virtual startups: one human founder stays accountable for direction and judgment, while AI agents execute work and Sidecar turns their conversation trail into a compounding operating system.
+
+AI Team Sidecar watches conversations from tools like Claude Code and Codex CLI, groups them by local repository, and evaluates execution quality as a lightweight startup management layer:
 
 ```text
 Founder / CEO
@@ -74,39 +78,13 @@ You only need to edit `~/.ai-team-sidecar/config.json` if you want to restrict m
 
 ## Operating Flywheel
 
-AI Team Sidecar is designed for a solo founder who wants to run an AI-native company with local AI agents as the project team. The founder stays responsible for direction and judgment; Sidecar turns the agent conversation trail into an operating system for better management.
+The Sidecar flywheel is shown as a circular operating loop, but the dependency model is a per-iteration DAG plus a cross-iteration feedback loop. Inside one execution loop, the dependencies move forward. The cycle comes from improved rules becoming part of the next loop's operating context.
 
-```text
-                         +----------------------+
-                         | 1. Founder Intent    |
-                         | goal / pain / P0 /   |
-                         | acceptance criteria  |
-                         +----------+-----------+
-                                    |
-                                    v
-+----------------------+   +-------+--------+   +----------------------+
-| 7. Better Next Loop  |<--| 6. Rules Improve|<--| 5. Founder Decides  |
-| stronger operating   |   | CLAUDE.md /     |   | keep / stop / scope |
-| system for agents    |   | project rules   |   | verify / change     |
-+----------+-----------+   +-------+--------+   +----------+-----------+
-           ^                       ^                       ^
-           |                       |                       |
-           |                       |                       |
-           |              +--------+---------+             |
-           |              | 4. Sidecar Audit |-------------+
-           |              | company / PMO /  |
-           |              | roles / delivery |
-           |              +--------+---------+
-           |                       ^
-           |                       |
-+----------+-----------+   +-------+--------+
-| 2. AI Agents Execute |-->| 3. Sidecar      |
-| Codex / Claude plan, |   | Observes        |
-| code, test, ship     |   | sessions/tokens |
-+----------------------+   +----------------+
-```
+<p align="center">
+  <img src="./docs/assets/opc-ai-company-flywheel.jpg" alt="OPC AI Company Flywheel" width="860">
+</p>
 
-The flywheel works because every AI work session creates management data. Instead of only asking whether the code changed, Sidecar asks whether the company is operating better: Are inputs sharper? Is scope controlled? Are Product, Engineer, QA, and Tech Lead behaviors showing up? Is delivery backed by evidence? Are tokens buying useful progress?
+This means `Founder Intent` depends on the current project rules, and `Rules Improve` affects the next iteration, not an earlier step in the same iteration. The flywheel works because every AI work session creates management data. Instead of only asking whether the code changed, Sidecar asks whether the company is operating better: Are inputs sharper? Is scope controlled? Are Product, RD/Engineer, QA, and Tech Lead behaviors showing up? Is delivery backed by evidence? Are tokens buying useful progress?
 
 Use it as a weekly or daily operating cadence:
 
