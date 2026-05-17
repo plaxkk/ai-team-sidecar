@@ -21,7 +21,7 @@ export interface SidecarConfig {
   };
 }
 
-export const SIDECAR_HOME = path.join(os.homedir(), '.virtual-team-sidecar');
+export const SIDECAR_HOME = path.join(os.homedir(), '.ai-team-sidecar');
 export const DEFAULT_CONFIG_PATH = path.join(SIDECAR_HOME, 'config.json');
 
 const DEFAULT_CONFIG: SidecarConfig = {

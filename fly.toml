@@ -1,4 +1,4 @@
-app = 'virtual-team-sidecar'
+app = 'ai-team-sidecar'
 primary_region = 'hkg'
 
 [build]
@@ -11,7 +11,7 @@ primary_region = 'hkg'
   min_machines_running = 0
 
 [[mounts]]
-  source = 'vts_data'
+  source = 'ats_data'
   destination = '/app/data'
 
 [[vm]]

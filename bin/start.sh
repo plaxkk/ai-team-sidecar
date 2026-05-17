@@ -23,7 +23,7 @@ DASH_PID=$!
 echo "  Dashboard PID: $DASH_PID"
 
 echo ""
-echo "Virtual Team Sidecar is running."
+echo "AI Team Sidecar is running."
 echo "  Daemon:   PID $DAEMON_PID"
 echo "  Dashboard: PID $DASH_PID  →  http://localhost:4041"
 echo ""

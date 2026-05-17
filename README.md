@@ -1,8 +1,8 @@
-# Virtual Team Sidecar
+# AI Team Sidecar
 
 Local dashboard and auditor for AI-assisted coding teams.
 
-Virtual Team Sidecar watches conversations from tools like Claude Code and Codex CLI, groups them by local repository, and evaluates execution quality like a lightweight startup operating system:
+AI Team Sidecar watches conversations from tools like Claude Code and Codex CLI, groups them by local repository, and evaluates execution quality like a lightweight startup operating system:
 
 - Company / founder operating health
 - Project PMO health
@@ -32,14 +32,14 @@ http://localhost:4041
 Default config path:
 
 ```text
-~/.virtual-team-sidecar/config.json
+~/.ai-team-sidecar/config.json
 ```
 
 Example:
 
 ```json
 {
-  "dataDir": "~/.virtual-team-sidecar/data",
+  "dataDir": "~/.ai-team-sidecar/data",
   "dashboardPort": 4041,
   "projects": [
     {
@@ -73,13 +73,13 @@ PORT=4041
 Default data directory:
 
 ```text
-~/.virtual-team-sidecar/data
+~/.ai-team-sidecar/data
 ```
 
 Main database:
 
 ```text
-~/.virtual-team-sidecar/data/feedback.db
+~/.ai-team-sidecar/data/feedback.db
 ```
 
 Core tables:
@@ -110,7 +110,7 @@ Runtime flow:
 ```text
 Claude Code hook event
   -> sidecar-hook
-  -> ~/.virtual-team-sidecar/data/feedback-pipe
+  -> ~/.ai-team-sidecar/data/feedback-pipe
   -> collector daemon
   -> SQLite
   -> analysis engine
