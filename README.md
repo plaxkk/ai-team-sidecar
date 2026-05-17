@@ -72,6 +72,52 @@ npm run doctor
 
 You only need to edit `~/.ai-team-sidecar/config.json` if you want to restrict monitoring to specific repositories. With the default empty `projects` list, Sidecar accepts every project `cwd` it sees.
 
+## Operating Flywheel
+
+AI Team Sidecar is designed for a solo founder who wants to run an AI-native company with local AI agents as the project team. The founder stays responsible for direction and judgment; Sidecar turns the agent conversation trail into an operating system for better management.
+
+```text
+                         +----------------------+
+                         | 1. Founder Intent    |
+                         | goal / pain / P0 /   |
+                         | acceptance criteria  |
+                         +----------+-----------+
+                                    |
+                                    v
++----------------------+   +-------+--------+   +----------------------+
+| 7. Better Next Loop  |<--| 6. Rules Improve|<--| 5. Founder Decides  |
+| stronger operating   |   | CLAUDE.md /     |   | keep / stop / scope |
+| system for agents    |   | project rules   |   | verify / change     |
++----------+-----------+   +-------+--------+   +----------+-----------+
+           ^                       ^                       ^
+           |                       |                       |
+           |                       |                       |
+           |              +--------+---------+             |
+           |              | 4. Sidecar Audit |-------------+
+           |              | company / PMO /  |
+           |              | roles / delivery |
+           |              +--------+---------+
+           |                       ^
+           |                       |
++----------+-----------+   +-------+--------+
+| 2. AI Agents Execute |-->| 3. Sidecar      |
+| Codex / Claude plan, |   | Observes        |
+| code, test, ship     |   | sessions/tokens |
++----------------------+   +----------------+
+```
+
+The flywheel works because every AI work session creates management data. Instead of only asking whether the code changed, Sidecar asks whether the company is operating better: Are inputs sharper? Is scope controlled? Are Product, Engineer, QA, and Tech Lead behaviors showing up? Is delivery backed by evidence? Are tokens buying useful progress?
+
+Use it as a weekly or daily operating cadence:
+
+- Start work from a concrete founder brief: goal, user, pain, P0 scope, constraints, and go/no-go criteria.
+- Let agents execute inside the repo while Sidecar runs in the background.
+- Review the dashboard by project, not by chat transcript: PMO score, risks, role quality, confidence, and cost.
+- Accept only rule feedback that would make the next execution loop clearer or stricter.
+- Push accepted lessons back into project `.md` files so the AI team becomes easier to manage over time.
+
+The goal is not to automate the CEO away. The goal is to make one founder behave like a tighter company: clearer inputs, smaller loops, better review habits, explicit quality bars, and a compounding rule system that improves every future AI agent run.
+
 ## Configuration
 
 Default config path:
