@@ -1,0 +1,1721 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Virtual Team Sidecar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --bg: #030305;
+      --bg-elevated: #0a0a0f;
+      --border: rgba(255,255,255,0.06);
+      --border-hover: rgba(0,212,170,0.2);
+      --primary: #00d4aa;
+      --primary-dim: rgba(0,212,170,0.1);
+      --accent: #6366f1;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --text-faint: #475569;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --success: #00d4aa;
+    }
+
+    * { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      overflow: hidden;
+    }
+
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+
+    .bg-glow {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 600px 400px at 20% 0%, rgba(0,212,170,0.04), transparent),
+        radial-gradient(ellipse 400px 300px at 80% 100%, rgba(99,102,241,0.03), transparent);
+    }
+
+    .scan-line {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0,212,170,0.4), transparent);
+      animation: scan 6s linear infinite;
+      pointer-events: none;
+      z-index: 50;
+    }
+    @keyframes scan {
+      0% { top: -5%; opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { top: 105%; opacity: 0; }
+    }
+
+    .glass-card {
+      background: rgba(255,255,255,0.015);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      backdrop-filter: blur(20px);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .glass-card:hover {
+      border-color: var(--border-hover);
+      box-shadow: 0 0 40px rgba(0,212,170,0.04), inset 0 1px 0 rgba(255,255,255,0.05);
+      transform: translateY(-1px);
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in {
+      animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      opacity: 0;
+    }
+
+    .num-glow {
+      text-shadow: 0 0 30px rgba(0,212,170,0.2);
+    }
+
+    .sidebar-active {
+      position: relative;
+    }
+    .sidebar-active::before {
+      content: '';
+      position: absolute;
+      left: -12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 20px;
+      background: var(--primary);
+      border-radius: 0 4px 4px 0;
+      box-shadow: 0 0 10px rgba(0,212,170,0.5);
+    }
+
+    .progress-ring-circle {
+      transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .shimmer {
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%);
+      background-size: 200% 100%;
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+    .pulse-dot {
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #00d4aa, #6366f1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .episode-row {
+      transition: all 0.2s ease;
+    }
+    .episode-row:hover {
+      background: rgba(0,212,170,0.02);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .btn-glow {
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-glow::after {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      background: linear-gradient(135deg, rgba(0,212,170,0.3), rgba(99,102,241,0.3));
+      border-radius: inherit;
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .btn-glow:hover::after {
+      opacity: 1;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .animate-in, .scan-line, .pulse-dot, .progress-ring-circle {
+        animation: none !important;
+        transition: none !important;
+        opacity: 1 !important;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { width: 100% !important; position: fixed; z-index: 100; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+  <div class="scan-line"></div>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useRef } = React;
+
+    const API = '';
+    function apiFetch(path) {
+      return fetch(API + path).then(r => r.json());
+    }
+
+    // ─── Color System ───
+    function scoreColor(v) {
+      if (v >= 0.7) return '#00d4aa';
+      if (v >= 0.4) return '#f59e0b';
+      return '#ef4444';
+    }
+
+    function scoreClass(v) {
+      if (v >= 0.7) return 'text-[#00d4aa]';
+      if (v >= 0.4) return 'text-[#f59e0b]';
+      return 'text-[#ef4444]';
+    }
+
+    function scoreBg(v) {
+      if (v >= 0.7) return 'bg-[rgba(0,212,170,0.1)] text-[#00d4aa] border-[rgba(0,212,170,0.2)]';
+      if (v >= 0.4) return 'bg-[rgba(245,158,11,0.1)] text-[#f59e0b] border-[rgba(245,158,11,0.2)]';
+      return 'bg-[rgba(239,68,68,0.1)] text-[#ef4444] border-[rgba(239,68,68,0.2)]';
+    }
+
+    function pct(v) {
+      return (v * 100).toFixed(0) + '%';
+    }
+
+    function formatTime(ts) {
+      if (!ts) return '-';
+      return new Date(ts).toLocaleString('zh-CN', {
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    function MetricHint({ formula, basis }) {
+      return (
+        <details className="mt-2 text-left">
+          <summary className="cursor-pointer list-none text-[10px] text-slate-600 hover:text-slate-400 transition-colors">
+            formula / rationale
+          </summary>
+          <div className="mt-2 rounded-lg border border-white/5 bg-black/20 p-2 space-y-1">
+            <div className="text-[11px] text-slate-400 leading-relaxed">{formula}</div>
+            <div className="text-[11px] text-slate-600 leading-relaxed">{basis}</div>
+          </div>
+        </details>
+      );
+    }
+
+    // ─── Animated Number Hook ───
+    function useCountUp(target, duration = 1500) {
+      const [value, setValue] = useState(0);
+      const startTime = useRef(null);
+      const raf = useRef(null);
+
+      useEffect(() => {
+        startTime.current = null;
+        const animate = (timestamp) => {
+          if (!startTime.current) startTime.current = timestamp;
+          const progress = Math.min((timestamp - startTime.current) / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          setValue(target * eased);
+          if (progress < 1) {
+            raf.current = requestAnimationFrame(animate);
+          }
+        };
+        raf.current = requestAnimationFrame(animate);
+        return () => cancelAnimationFrame(raf.current);
+      }, [target, duration]);
+
+      return value;
+    }
+
+    // ─── Circular Progress ───
+    function CircularProgress({ value, size = 120, strokeWidth = 6, label, sublabel }) {
+      const radius = (size - strokeWidth) / 2;
+      const circumference = radius * 2 * Math.PI;
+      const offset = circumference - value * circumference;
+      const color = scoreColor(value);
+      const animatedValue = useCountUp(value);
+
+      return (
+        <div className="flex flex-col items-center">
+          <div className="relative" style={{ width: size, height: size }}>
+            <svg width={size} height={size} className="transform -rotate-90">
+              <circle
+                cx={size/2} cy={size/2} r={radius}
+                fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={strokeWidth}
+              />
+              <circle
+                cx={size/2} cy={size/2} r={radius}
+                fill="none" stroke={color} strokeWidth={strokeWidth}
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={offset}
+                className="progress-ring-circle"
+                style={{ filter: `drop-shadow(0 0 6px ${color}40)` }}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className={`text-2xl font-bold font-mono ${scoreClass(value)}`} style={{ textShadow: `0 0 20px ${color}40` }}>
+                {pct(animatedValue)}
+              </span>
+              {sublabel && <span className="text-[10px] text-slate-500 mt-0.5">{sublabel}</span>}
+            </div>
+          </div>
+          {label && <span className="text-xs text-slate-400 mt-2 font-medium">{label}</span>}
+        </div>
+      );
+    }
+
+    // ─── Linear Progress ───
+    function LinearProgress({ value, label, showValue = true }) {
+      const color = scoreColor(value);
+      const [width, setWidth] = useState(0);
+
+      useEffect(() => {
+        const t = setTimeout(() => setWidth(value * 100), 100);
+        return () => clearTimeout(t);
+      }, [value]);
+
+      return (
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-slate-400">{label}</span>
+            {showValue && <span className={`text-xs font-mono font-medium ${scoreClass(value)}`}>{pct(value)}</span>}
+          </div>
+          <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-1000 ease-out"
+              style={{
+                width: `${width}%`,
+                background: `linear-gradient(90deg, ${color}80, ${color})`,
+                boxShadow: `0 0 8px ${color}40`
+              }}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Glass Card ───
+    function GlassCard({ children, className = '', delay = 0 }) {
+      return (
+        <div
+          className={`glass-card p-5 ${className}`}
+          style={{ animationDelay: `${delay}ms` }}
+        >
+          {children}
+        </div>
+      );
+    }
+
+    // ─── Section Header ───
+    function SectionHeader({ title, subtitle, icon }) {
+      return (
+        <div className="flex items-center gap-3 mb-4">
+          {icon && <span className="text-lg">{icon}</span>}
+          <div>
+            <h3 className="text-sm font-semibold text-slate-200 tracking-wide">{title}</h3>
+            {subtitle && <p className="text-[11px] text-slate-500 mt-0.5">{subtitle}</p>}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Global Overview ───
+    function GlobalOverview({ data }) {
+      if (!data) return null;
+      const { total_projects, total_sessions, total_episodes, avg_overall_score, total_violations } = data;
+
+      const metrics = [
+        { label: 'Projects', value: total_projects || 0, icon: '◈' },
+        { label: 'Sessions', value: total_sessions, icon: '◆' },
+        { label: 'Episodes', value: total_episodes, icon: '◇' },
+        { label: 'Avg Score', value: pct(avg_overall_score || 0), icon: '◉', isPct: true },
+        { label: 'Violations', value: total_violations, icon: '◊', isWarning: true },
+      ];
+
+      return (
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6 animate-in" style={{ animationDelay: '100ms' }}>
+          {metrics.map((m) => (
+            <div key={m.label} className="glass-card p-4 flex items-center gap-3">
+              <span className={`text-xl ${m.isWarning ? 'text-red-400' : 'text-slate-600'}`}>{m.icon}</span>
+              <div>
+                <div className={`text-2xl font-bold font-mono ${m.isWarning ? 'text-red-400' : 'text-slate-200'}`}>
+                  {m.value}
+                </div>
+                <div className="text-[11px] text-slate-500 uppercase tracking-wider">{m.label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ─── Company Audit ───
+    function CompanyAuditPanel({ report }) {
+      if (!report) return null;
+      const metrics = [
+        ['Company', report.company_score, '30% Portfolio + 25% Founder + 25% Velocity + 20% Capital Efficiency', '从第三方独立机构视角判断这家 AI 初创公司是否处在健康执行状态。'],
+        ['Founder', report.founder_operating_score, 'Input + Rule Compliance + Output + Focus', '评估屏幕前 CEO 的需求定义、收口决策、范围控制和推动闭环能力。'],
+        ['Portfolio', report.portfolio_health, 'avg(project management health)', '评估所有本地 repo 项目组的组合健康度和项目分散风险。'],
+        ['Capital', report.capital_efficiency, 'output quality adjusted by token/episode cost', '评估 token、工具调用和会话成本是否换来了足够项目产出。'],
+        ['Velocity', report.execution_velocity, 'efficiency adjusted by turns/episode', '评估项目组是否快速推进，而不是高轮次低闭环。'],
+        ['Focus', report.focus_score, 'active project fragmentation + repeated risk penalty', '评估 CEO 是否过度并行、频繁切换和重复踩坑。'],
+      ];
+
+      return (
+        <GlassCard className="mb-6 animate-in" delay={130}>
+          <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-5">
+            <SectionHeader title="Start-up Company Audit" subtitle="Company -> CEO -> Project Groups -> Roles -> Sidecar Flywheel" icon="◉" />
+            <div className="text-right">
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Operating Model</div>
+              <div className="text-sm text-slate-300">{report.company_layer?.operating_model || 'unknown'}</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-5">
+            {metrics.map(([label, value, formula, basis]) => (
+              <div key={label} className="rounded-xl bg-white/[0.02] border border-white/5 p-3 text-center">
+                <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{label}</div>
+                <div className={`text-xl font-bold font-mono ${scoreClass((value || 0) / 100)}`}>{value || 0}</div>
+                <MetricHint formula={formula} basis={basis} />
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div>
+              <div className="text-[10px] text-[#00d4aa]/70 uppercase tracking-wider mb-2 font-medium">Founder Feedback</div>
+              <div className="space-y-2">
+                {(report.ceo_layer?.feedback || []).slice(0, 4).map((item, i) => (
+                  <div key={i} className="text-sm text-[#00d4aa]/80 bg-[#00d4aa]/5 border border-[#00d4aa]/10 rounded-lg px-3 py-2.5">{item}</div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-red-400/70 uppercase tracking-wider mb-2 font-medium">Root Causes</div>
+              <div className="space-y-2">
+                {(report.sidecar_findings?.root_causes || []).slice(0, 4).map((item, i) => (
+                  <div key={i} className="text-sm text-red-300/80 bg-red-500/5 border border-red-500/10 rounded-lg px-3 py-2.5">{item}</div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-amber-300/70 uppercase tracking-wider mb-2 font-medium">Interventions</div>
+              <div className="space-y-2">
+                {(report.sidecar_findings?.recommended_interventions || []).slice(0, 4).map((item, i) => (
+                  <div key={i} className="text-sm text-amber-100/80 bg-amber-500/5 border border-amber-500/10 rounded-lg px-3 py-2.5">{item}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </GlassCard>
+      );
+    }
+
+    // ─── Project Overview ───
+    function ProjectOverview({ projects, onSelect }) {
+      if (!projects || projects.length === 0) {
+        return (
+          <GlassCard className="text-center py-16">
+            <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl text-slate-600">◈</span>
+            </div>
+            <p className="text-slate-400 mb-1">No projects detected</p>
+            <p className="text-xs text-slate-700">Project grouping uses the session cwd path</p>
+          </GlassCard>
+        );
+      }
+
+      return (
+        <div className="grid grid-cols-1 gap-4 animate-in" style={{ animationDelay: '160ms' }}>
+          {projects.map(project => (
+            <div
+              key={project.project_path}
+              onClick={() => onSelect(project.project_path)}
+              className="glass-card p-5 cursor-pointer transition-all hover:bg-white/[0.04] hover:border-white/[0.1]"
+            >
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h2 className="text-lg font-semibold text-slate-200 truncate">{project.project_name}</h2>
+                    <span className={`badge border ${scoreBg(project.overall_score || 0)}`}>{pct(project.overall_score || 0)}</span>
+                  </div>
+                  <div className="text-xs text-slate-600 font-mono truncate mb-3">{project.project_path}</div>
+                  <div className="flex flex-wrap gap-2 text-[11px] text-slate-500">
+                    <span className="px-2 py-1 rounded-md bg-white/[0.03] border border-white/5">{project.session_count} sessions</span>
+                    <span className="px-2 py-1 rounded-md bg-white/[0.03] border border-white/5">{project.total_episodes || 0} episodes</span>
+                    <span className="px-2 py-1 rounded-md bg-white/[0.03] border border-white/5">{project.total_turns || 0} turns</span>
+                    <span className="px-2 py-1 rounded-md bg-white/[0.03] border border-white/5">Updated {formatTime(project.last_activity)}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:w-[420px]">
+                  {[
+                    ['Input', project.input_quality_score],
+                    ['Process', project.process_health_score],
+                    ['Output', project.output_quality_score],
+                    ['Confidence', project.confidence_score],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-lg bg-white/[0.02] border border-white/5 p-3 text-center">
+                      <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{label}</div>
+                      <div className={`text-base font-bold font-mono ${scoreClass(value || 0)}`}>{pct(value || 0)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {(project.top_risks || []).length > 0 && (
+                <div className="mt-4 pt-4 border-t border-white/5">
+                  <div className="text-[10px] text-red-400/70 uppercase tracking-wider mb-2 font-medium">Top Risks</div>
+                  <div className="flex flex-wrap gap-2">
+                    {(project.top_risks || []).slice(0, 3).map((risk, i) => (
+                      <span key={i} className="text-xs text-red-300/80 bg-red-500/5 border border-red-500/10 rounded-md px-2 py-1">
+                        {risk}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ─── Team Health ───
+    function TeamHealth({ ceoReport }) {
+      if (!ceoReport) {
+        return (
+          <GlassCard className="mb-6 animate-in" delay={200}>
+            <div className="flex items-center justify-center h-32">
+              <div className="w-8 h-8 border-2 border-[#00d4aa]/20 border-t-[#00d4aa] rounded-full animate-spin" />
+            </div>
+          </GlassCard>
+        );
+      }
+
+      const { team_health, weakest_role, trend, role_scores } = ceoReport;
+      const trendIcon = trend === 'improving' ? '↗' : trend === 'declining' ? '↘' : '→';
+      const trendColor = trend === 'improving' ? '#00d4aa' : trend === 'declining' ? '#ef4444' : '#94a3b8';
+
+      const roleOrder = ['product', 'engineer', 'qa', 'techlead'];
+      const roleLabels = { product: 'Product', engineer: 'Engineer', qa: 'QA', techlead: 'Tech Lead' };
+
+      return (
+        <GlassCard className="mb-6 animate-in" delay={200}>
+          <div className="flex flex-col lg:flex-row items-center gap-8">
+            <div className="flex flex-col items-center">
+              <div className="text-[11px] text-slate-500 uppercase tracking-widest mb-2">Team Health</div>
+              <CircularProgress value={team_health} size={140} strokeWidth={8} />
+            </div>
+
+            <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+              {roleOrder.map(role => {
+                const score = role_scores && role_scores[role] ? role_scores[role] : 0;
+                return (
+                  <div key={role} className="text-center p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                    <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{roleLabels[role]}</div>
+                    <div className={`text-xl font-bold font-mono ${scoreClass(score)}`} style={{ textShadow: `0 0 15px ${scoreColor(score)}30` }}>
+                      {pct(score)}
+                    </div>
+                    <LinearProgress value={score} showValue={false} />
+                    <MetricHint
+                      formula={role === 'product'
+                        ? '35% Spec + 25% 忠实度 + 20% 歧义 + 20% 优先级'
+                        : role === 'engineer'
+                          ? '30% 方案完整 + 20% 方案对比 + 25% Spec遵从 + 25% MVP'
+                          : role === 'qa'
+                            ? '25% 独立性 + 25% 边界 + 25% 风险标注 + 25% 问题发现'
+                            : '30% 决策完整 + 25% 风险传达 + 25% Go/No-Go + 20% 信息综合'}
+                      basis={role === 'product'
+                        ? 'Product 分用于判断需求是否产品化，低分通常先补目标、场景、成功指标和优先级。'
+                        : role === 'engineer'
+                          ? 'Engineer 分用于判断技术方案是否可执行且足够收敛，低分重点看方案、代码和改动范围。'
+                          : role === 'qa'
+                            ? 'QA 分用于判断质量审查是否独立、覆盖边界并明确风险。'
+                            : 'Tech Lead 分用于判断是否形成交付决策、风险传达和跨角色收口。'}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-col items-center gap-3 min-w-[100px]">
+              <div className="text-center">
+                <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Weakest</div>
+                <div className={`text-lg font-semibold capitalize ${scoreClass(role_scores && role_scores[weakest_role] ? role_scores[weakest_role] : 0)}`}>
+                  {weakest_role}
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5">
+                <span style={{ color: trendColor }} className="font-mono text-sm">{trendIcon}</span>
+                <span style={{ color: trendColor }} className="text-xs font-medium capitalize">{trend}</span>
+              </div>
+            </div>
+          </div>
+        </GlassCard>
+      );
+    }
+
+    // ─── Bidirectional Quality ───
+    function BidirectionalQuality({ ceoReport }) {
+      if (!ceoReport) return null;
+      const { prompt_quality, delivery_quality, prompt_details, delivery_details, prompt_explainability, delivery_explainability } = ceoReport;
+
+      const dims = (obj) => Object.entries(obj || {});
+      const explainDims = (obj) => Object.entries((obj && obj.dimensions) || {});
+
+      const ExplainabilityBlock = ({ data }) => {
+        if (!data || !data.dimensions) return null;
+        return (
+          <div className="mt-4 pt-4 border-t border-white/5">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Explainability</div>
+                <div className="text-xs text-slate-500">{data.formula}</div>
+              </div>
+              <span className="text-[10px] text-slate-500 font-mono">confidence {pct(data.confidence || 0)}</span>
+            </div>
+            {data.qualitative_summary && (
+              <div className="text-sm text-slate-400 bg-white/[0.02] border border-white/5 rounded-lg px-3 py-2 mb-3">
+                {data.qualitative_summary}
+              </div>
+            )}
+            <div className="space-y-2">
+              {explainDims(data).map(([name, dim]) => (
+                <details key={name} className="rounded-lg border border-white/5 bg-black/10 px-3 py-2">
+                  <summary className="cursor-pointer list-none flex items-center justify-between gap-3">
+                    <div className="text-xs text-slate-300">{name} · weight {Math.round((dim.weight || 0) * 100)}%</div>
+                    <div className={`text-xs font-mono ${scoreClass(dim.score || 0)}`}>{pct(dim.score || 0)}</div>
+                  </summary>
+                  <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <div className="text-[10px] text-[#00d4aa]/70 uppercase tracking-wider mb-1">Signals</div>
+                      {(dim.signals || []).length > 0 ? (dim.signals || []).map((s, i) => (
+                        <div key={i} className="text-[#00d4aa]/75 mb-1">• {s}</div>
+                      )) : <div className="text-slate-600">No positive signal</div>}
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-red-400/70 uppercase tracking-wider mb-1">Missing</div>
+                      {(dim.missing || []).length > 0 ? (dim.missing || []).map((s, i) => (
+                        <div key={i} className="text-red-300/75 mb-1">• {s}</div>
+                      )) : <div className="text-slate-600">No major missing item</div>}
+                    </div>
+                  </div>
+                  <div className="mt-3 text-xs text-slate-500 leading-relaxed">{dim.rationale}</div>
+                  <div className="mt-2 text-xs text-amber-200/75 leading-relaxed">{dim.recommendation}</div>
+                </details>
+              ))}
+            </div>
+          </div>
+        );
+      };
+
+      return (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          <GlassCard className="animate-in" delay={300}>
+            <div className="flex items-center justify-between mb-4">
+              <SectionHeader title="Prompt Quality" subtitle="用户输入质量评估" icon="⌨" />
+              <span className={`badge border ${scoreBg(prompt_quality)}`}>{pct(prompt_quality)}</span>
+            </div>
+            <div className="space-y-3">
+              {dims(prompt_details).map(([dim, val]) => (
+                <LinearProgress key={dim} value={val} label={dim} />
+              ))}
+              {dims(prompt_details).length === 0 && (
+                <div className="text-sm text-slate-600 text-center py-4">No dimension data</div>
+              )}
+            </div>
+            <ExplainabilityBlock data={prompt_explainability} />
+          </GlassCard>
+
+          <GlassCard className="animate-in" delay={400}>
+            <div className="flex items-center justify-between mb-4">
+              <SectionHeader title="Delivery Quality" subtitle="AI 交付质量评估" icon="◈" />
+              <span className={`badge border ${scoreBg(delivery_quality)}`}>{pct(delivery_quality)}</span>
+            </div>
+            <div className="space-y-3">
+              {dims(delivery_details).map(([dim, val]) => (
+                <LinearProgress key={dim} value={val} label={dim} />
+              ))}
+              {dims(delivery_details).length === 0 && (
+                <div className="text-sm text-slate-600 text-center py-4">No dimension data</div>
+              )}
+            </div>
+            <ExplainabilityBlock data={delivery_explainability} />
+          </GlassCard>
+        </div>
+      );
+    }
+
+    // ─── Project Management ───
+    function ProjectManagementPanel({ report }) {
+      if (!report) return null;
+
+      const metrics = [
+        ['Management', report.overall_score, '20% Input + 35% Process + 30% Output + 15% Confidence', '用于判断项目是否处于可控交付状态，权重更偏过程和结果。'],
+        ['Input', report.input_quality_score, 'Prompt Issue Score = 1 - 需求问题扣分', '输入质量决定返工风险，重点看目标、验收、边界和优先级。'],
+        ['Process', report.process_health_score, '25% Team + 25% Efficiency + 20% Flow + 15% Handoff + 15% Requirement', '过程健康度用于发现角色缺失、轮次发散、返工和需求理解问题。'],
+        ['Output', report.output_quality_score, '60% Delivery Quality + 40% Role Execution Score', '结果质量用于判断交付是否完整、可验收、有明确结论。'],
+        ['Confidence', report.confidence_score, '100% 起，按重复 turn、异常耗时、缺失耗时、样本过少扣分，最低 30%', '置信度低时，先修数据采集口径，再用指标做管理判断。'],
+      ];
+      const diagnosticMetrics = [
+        ['Team', report.team_composition_score, '按任务类型检查必要角色是否参与，并检查职责边界', '用于发现当前任务是否缺 Product/Engineer/QA/Tech Lead 等关键职责。'],
+        ['Efficiency', report.efficiency_score, '25% 响应效率 + 20% 轮次 + 20% 工具 + 20% 返工 + 15% 验证', '用于定位执行成本是否过高，指导拆任务、减少重复探索和补验证闭环。'],
+        ['Prompt', report.prompt_issue_score, '1 - 高/中/低 prompt 问题扣分', '用于发现需求输入是否缺目标、验收、边界、优先级或上下文。'],
+      ];
+
+      const latestEpisodes = (report.episodes || []).slice(-3).reverse();
+
+      return (
+        <GlassCard className="mb-6 animate-in" delay={500}>
+          <div className="flex items-center justify-between mb-5">
+            <SectionHeader title="Management Health" subtitle="输入 / 过程 / 输出 / 置信度" icon="◉" />
+            <span className="text-[10px] text-slate-600 font-mono">{formatTime(report.generated_at)}</span>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
+            {metrics.map(([label, value, formula, basis]) => (
+              <div key={label} className="p-3 rounded-xl bg-white/[0.02] border border-white/5 text-center">
+                <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{label}</div>
+                <div className={`text-xl font-bold font-mono ${scoreClass(value || 0)}`}>
+                  {pct(value || 0)}
+                </div>
+                <MetricHint formula={formula} basis={basis} />
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 mb-5">
+            {diagnosticMetrics.map(([label, value, formula, basis]) => (
+              <div key={label} className="p-3 rounded-xl bg-white/[0.015] border border-white/5 text-center">
+                <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{label} Diagnostic</div>
+                <div className={`text-base font-bold font-mono ${scoreClass(value || 0)}`}>
+                  {pct(value || 0)}
+                </div>
+                <MetricHint formula={formula} basis={basis} />
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+            <div>
+              <div className="text-[10px] text-red-400/70 uppercase tracking-wider mb-2 font-medium">Risk Factors</div>
+              <div className="space-y-2">
+                {(report.top_risks || []).slice(0, 5).map((risk, i) => (
+                  <div key={i} className="text-sm text-red-300/80 bg-red-500/5 border border-red-500/10 rounded-lg px-3 py-2.5 flex items-start gap-2">
+                    <span className="text-red-400/50 text-xs mt-0.5">▸</span>
+                    <span>{risk}</span>
+                  </div>
+                ))}
+                {(!report.top_risks || report.top_risks.length === 0) && (
+                  <div className="text-sm text-slate-600 py-2">No risks detected</div>
+                )}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-amber-300/70 uppercase tracking-wider mb-2 font-medium">Data Quality</div>
+              <div className="space-y-2">
+                {(report.data_quality_flags || []).slice(0, 5).map((flag, i) => (
+                  <div key={i} className="text-sm text-amber-200/80 bg-amber-500/5 border border-amber-500/10 rounded-lg px-3 py-2.5 flex items-start gap-2">
+                    <span className="text-amber-300/50 text-xs mt-0.5">▸</span>
+                    <span>{flag}</span>
+                  </div>
+                ))}
+                {(!report.data_quality_flags || report.data_quality_flags.length === 0) && (
+                  <div className="text-sm text-slate-600 py-2">Data confidence looks clean</div>
+                )}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-[#00d4aa]/70 uppercase tracking-wider mb-2 font-medium">Recommendations</div>
+              <div className="space-y-2">
+                {(report.recommendations || []).slice(0, 5).map((rec, i) => (
+                  <div key={i} className="text-sm text-[#00d4aa]/80 bg-[#00d4aa]/5 border border-[#00d4aa]/10 rounded-lg px-3 py-2.5 flex items-start gap-2">
+                    <span className="text-[#00d4aa]/50 text-xs mt-0.5">▸</span>
+                    <span>{rec}</span>
+                  </div>
+                ))}
+                {(!report.recommendations || report.recommendations.length === 0) && (
+                  <div className="text-sm text-slate-600 py-2">No recommendations</div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {latestEpisodes.length > 0 && (
+            <div>
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2 font-medium">Recent Episodes</div>
+              <div className="space-y-2">
+                {latestEpisodes.map(ep => (
+                  <div key={ep.episode_id} className="border border-white/5 rounded-xl p-3 bg-white/[0.02] episode-row">
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 text-slate-400 shrink-0 border border-white/5">{ep.task_type}</span>
+                        <span className="text-sm text-slate-300 truncate">{ep.user_requirement}</span>
+                      </div>
+                      <span className={`text-sm font-bold font-mono ${scoreClass(ep.overall_score || 0)}`}>{pct(ep.overall_score || 0)}</span>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-slate-500">
+                      <div>Input: {pct(ep.input_quality_score || 0)}</div>
+                      <div>Process: {pct(ep.process_health_score || 0)}</div>
+                      <div>Output: {pct(ep.output_quality_score || 0)}</div>
+                      <div>Confidence: {pct(ep.confidence_score || 0)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </GlassCard>
+      );
+    }
+
+    // ─── Startup Audit ───
+    function StartupAuditPanel({ report }) {
+      if (!report) return null;
+      const scores = report.dimension_scores || {};
+      const scoreItems = [
+        ['Rule Compliance', scores.rule_compliance, '规则遵循度 = 角色完整性 + 强制流程 + QA/Tech Lead 输出 + 违规扣分', '用于发现越权、漏步和格式错误。低分时优先修规则执行，而不是继续堆功能。'],
+        ['Dialogue Quality', scores.dialogue_quality, '对话质量 = Handoff + Requirement + Delivery - 重复/空响应扣分', '用于判断信息是否无损传递，是否存在上下文断裂、废话和返工信号。'],
+        ['Startup Excellence', scores.startup_excellence, '初创卓越度 = Efficiency + Output + Input + MVP/验证信号 - 过度设计扣分', '最重要指标。用于判断是否符合极致 MVP、快速闭环、直击痛点和拒绝过度设计。'],
+      ];
+
+      return (
+        <GlassCard className="mb-6 animate-in" delay={420}>
+          <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-5">
+            <SectionHeader title="Startup Audit" subtitle="规则 + 对话 -> Sidecar 结构化审计 JSON" icon="◆" />
+            <div className="text-center">
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Total</div>
+              <div className={`text-3xl font-bold font-mono ${scoreClass((report.total_score || 0) / 100)}`}>{report.total_score}</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-5">
+            {scoreItems.map(([label, value, formula, basis]) => (
+              <div key={label} className="rounded-xl bg-white/[0.02] border border-white/5 p-3">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <div className="text-[10px] text-slate-500 uppercase tracking-wider">{label}</div>
+                  <div className={`text-lg font-bold font-mono ${scoreClass((value || 0) / 100)}`}>{value || 0}</div>
+                </div>
+                <LinearProgress value={(value || 0) / 100} showValue={false} />
+                <MetricHint formula={formula} basis={basis} />
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+            <div>
+              <div className="text-[10px] text-[#00d4aa]/70 uppercase tracking-wider mb-2 font-medium">Highlights</div>
+              <div className="space-y-2">
+                {(report.highlights || []).map((item, i) => (
+                  <div key={i} className="text-sm text-[#00d4aa]/80 bg-[#00d4aa]/5 border border-[#00d4aa]/10 rounded-lg px-3 py-2.5">{item}</div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-red-400/70 uppercase tracking-wider mb-2 font-medium">Anti Patterns</div>
+              <div className="space-y-2">
+                {(report.anti_patterns || []).map((item, i) => (
+                  <div key={i} className="text-sm text-red-300/80 bg-red-500/5 border border-red-500/10 rounded-lg px-3 py-2.5">{item}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {report.rule_feedback && (
+            <div className="rounded-xl border border-amber-500/10 bg-amber-500/[0.04] p-4">
+              <div className="text-[10px] text-amber-300/70 uppercase tracking-wider mb-2 font-medium">Rule Feedback</div>
+              <div className="text-sm text-amber-100/80 leading-relaxed mb-3">{report.rule_feedback.current_weakness}</div>
+              <pre className="text-xs text-amber-100/70 whitespace-pre-wrap leading-relaxed bg-black/20 border border-white/5 rounded-lg p-3 overflow-x-auto">{report.rule_feedback.suggested_md_patch}</pre>
+            </div>
+          )}
+
+          {report.project_layer && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-5">
+              <div className="rounded-xl border border-white/5 bg-white/[0.015] p-4">
+                <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-3 font-medium">Project Operating Layer</div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <div className="text-[10px] text-slate-600 uppercase tracking-wider">Stage</div>
+                    <div className="text-slate-300 mt-1">{report.project_layer.operating_stage}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-600 uppercase tracking-wider">Bottleneck</div>
+                    <div className="text-red-300/80 mt-1">{report.project_layer.biggest_bottleneck}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-600 uppercase tracking-wider">Management</div>
+                    <div className={scoreClass(report.project_layer.management_health || 0)}>{pct(report.project_layer.management_health || 0)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-600 uppercase tracking-wider">Output</div>
+                    <div className={scoreClass(report.project_layer.output_quality || 0)}>{pct(report.project_layer.output_quality || 0)}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-white/5 bg-white/[0.015] p-4">
+                <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-3 font-medium">Sidecar Flywheel</div>
+                <div className="space-y-2">
+                  {(report.sidecar_findings?.recommended_interventions || []).slice(0, 3).map((item, i) => (
+                    <div key={i} className="text-sm text-slate-300 bg-white/[0.02] border border-white/5 rounded-lg px-3 py-2">{item}</div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </GlassCard>
+      );
+    }
+
+    // ─── Metric Methodology ───
+    function MetricMethodology({ mode = 'executive' }) {
+      const executiveMetrics = [
+        {
+          name: 'Management Health',
+          formula: '20% Input + 35% Process + 30% Output + 15% Confidence',
+          source: '项目下所有 episode 的管理健康度平均值',
+          meaning: '项目 PMO 用它判断单个项目是否处在可控交付状态。低于 60% 优先复盘流程和风险，低于 40% 说明项目管理数据和交付闭环都不健康。',
+        },
+        {
+          name: 'Input',
+          formula: 'Prompt Issue Score：1 - 高/中/低问题扣分；高 25%，中 15%，低 8%',
+          source: '用户需求描述，检查目标、验收标准、边界、拆分、优先级、继续类上下文',
+          meaning: '衡量需求输入是否足够可执行。低分代表目标、验收或边界不清，PMO 应先补齐任务定义，而不是急着推进实现。',
+        },
+        {
+          name: 'Process',
+          formula: '25% Team + 25% Efficiency + 20% Flow + 15% Handoff + 15% Requirement',
+          source: '角色参与、响应效率、轮次、工具调用、返工信号、流程步骤、需求覆盖',
+          meaning: '衡量项目过程是否可控。低分通常表示角色缺失、轮次发散、返工多或需求理解弱，适合指导流程改进和任务拆分。',
+        },
+        {
+          name: 'Output',
+          formula: '60% Delivery Quality + 40% Role Execution Score',
+          source: 'AI 交付质量与 Product/Engineer/QA/Tech Lead 角色执行评分',
+          meaning: '衡量交付结果是否完整、可验证、有结论。低分说明虽然可能做了很多动作，但交付物和决策闭环不足。',
+        },
+        {
+          name: 'Confidence',
+          formula: '从 100% 开始，按数据质量问题扣分，最低保留 30%',
+          source: '重复 turn、异常长耗时、缺失耗时、样本过少等数据质量标记',
+          meaning: '衡量这个评分本身是否可信。低分时不能简单用健康度做管理判断，应先修采集口径或剔除异常样本。',
+        },
+        {
+          name: 'Team Health',
+          formula: '30% Product + 30% Engineer + 20% QA + 20% Tech Lead',
+          source: '项目下所有 role_evaluations 的角色平均分',
+          meaning: '衡量虚拟团队职责是否完整。最弱角色用于定位组织能力短板，例如 Product 低说明需求结构弱，Tech Lead 低说明决策收口弱。',
+        },
+      ];
+      const diagnosticMetrics = [
+        {
+          name: 'Flow Score',
+          formula: '30% 步骤完整性 + 20% 顺序 + 30% 深度 + 20% 禁止行为',
+          source: '响应内容中的 Product / Engineer / QA / Tech Lead 标记和段落长度',
+          meaning: '用于检查协作流程是否按约定执行。它偏格式化，不应单独代表真实交付质量。',
+        },
+        {
+          name: 'Handoff Score',
+          formula: '平滑交接次数 / 角色切换次数',
+          source: '角色切换附近是否出现“接下来、交接、handoff”等过渡信号',
+          meaning: '用于发现角色之间是否有明确承接关系。低分提示需要在输出中显式说明上一步结论如何进入下一步。',
+        },
+        {
+          name: 'Requirement Score',
+          formula: '30% 实体确认 + 30% Spec 字段 + 25% 关键词覆盖 + 15% 迭代收敛',
+          source: '用户 prompt 与 assistant response 的实体、关键词、Engineering Task Spec',
+          meaning: '衡量需求是否被正确理解和转译。低分说明要先补需求复述、范围、风险和测试策略。',
+        },
+        {
+          name: 'Efficiency Score',
+          formula: '25% 响应效率 + 20% 轮次收敛 + 20% 工具效率 + 20% 返工控制 + 15% 验证闭环',
+          source: 'turn 数、响应耗时、工具调用次数、返工关键词、验证关键词',
+          meaning: '衡量执行成本是否合理。低分可指导拆小任务、减少重复探索、强化阶段性验收。',
+        },
+        {
+          name: 'Prompt Quality',
+          formula: '30% 明确性 + 25% 完整性 + 25% 可执行性 + 20% 上下文',
+          source: '用户 prompt 是否包含文件/模块、目标、范围、约束、操作对象和背景',
+          meaning: '用于改进提需求方式。低分不是批评用户，而是提示任务输入需要产品化整理。',
+        },
+        {
+          name: 'Delivery Quality',
+          formula: '30% 任务覆盖 + 25% 代码质量 + 20% 验证步骤 + 25% 输出完整性',
+          source: 'assistant response 是否覆盖请求、含代码/解释、验证命令、总结和后续动作',
+          meaning: '用于判断单次交付是否可验收。低分说明需要补验证证据、结论摘要或后续动作。',
+        },
+        {
+          name: 'Role Scores',
+          formula: '各角色按自身维度加权：Product/Engineer/QA/Tech Lead 分别使用不同检查项',
+          source: 'Product Spec、技术方案、QA 风险、Tech Lead 决策段落',
+          meaning: '用于定位执行层短板。不要直接做人效评价，应结合项目上下文看角色职责是否被覆盖。',
+        },
+      ];
+      const items = mode === 'diagnostic' ? diagnosticMetrics : executiveMetrics;
+
+      return (
+        <GlassCard className="mb-6 animate-in" delay={900}>
+          <SectionHeader
+            title={mode === 'diagnostic' ? 'Diagnostic Metric Methodology' : 'Management Metric Methodology'}
+            subtitle={mode === 'diagnostic' ? '执行层诊断指标的公式、来源和改进动作' : '项目 PMO 指标的公式、来源和管理含义'}
+            icon="ⓘ"
+          />
+          <div className="space-y-3">
+            {items.map(item => (
+              <details key={item.name} className="group rounded-xl border border-white/5 bg-white/[0.015] px-4 py-3">
+                <summary className="cursor-pointer list-none flex items-center justify-between gap-4">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-200">{item.name}</div>
+                    <div className="text-xs text-slate-600 mt-0.5">{item.formula}</div>
+                  </div>
+                  <span className="text-slate-600 text-xs transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <div className="mt-3 pt-3 border-t border-white/5 grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Data Source</div>
+                    <div className="text-sm text-slate-400 leading-relaxed">{item.source}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-[#00d4aa]/70 uppercase tracking-wider mb-1">Management Use</div>
+                    <div className="text-sm text-[#00d4aa]/75 leading-relaxed">{item.meaning}</div>
+                  </div>
+                </div>
+              </details>
+            ))}
+          </div>
+        </GlassCard>
+      );
+    }
+
+    // ─── Resource Management ───
+    function ResourceManagementPanel({ report }) {
+      if (!report) return null;
+      const totals = report.totals || {};
+
+      return (
+        <GlassCard className="mb-6 animate-in" delay={750}>
+          <div className="flex items-start justify-between gap-4 mb-5">
+            <SectionHeader title="Lifecycle & Resource Cost" subtitle="项目阶段、人效耗比、异构 Agent Token 消耗" icon="◬" />
+            <span className="badge border bg-[rgba(245,158,11,0.1)] text-[#f59e0b] border-[rgba(245,158,11,0.2)]">
+              {report.token_source === 'mixed' ? 'Mixed actual/estimated' : report.token_source === 'estimated' ? 'Estimated tokens' : 'Token usage'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-5">
+            {[
+              ['Counted Tokens', totals.counted_tokens || totals.estimated_tokens || 0, 'Codex actual tokens + Claude estimated visible/tool tokens', '管理口径的总消耗。Codex 使用真实 usage；Claude 使用可见文本和工具 IO 估算。'],
+              ['Actual Tokens', totals.actual_tokens || 0, 'sum(sessions.total_tokens where token_source = actual)', '目前主要来自 Codex CLI 的 threads.tokens_used，可用于更接近真实账单的消耗判断。'],
+              ['Tool IO Tokens', totals.tool_io_tokens || 0, 'sum(ceil((tool_input + tool_response chars) / 4))', '补上文件读取、命令输出等工具上下文；这是之前漏计最明显的部分。'],
+              ['Episodes', totals.episodes || 0, 'project episodes count', '衡量项目管理样本量，样本少时不要过度解释趋势。'],
+              ['Turns', totals.turns || 0, 'project turns count', '反映沟通往返成本，过高通常意味着任务拆分或验收标准不足。'],
+              ['Actual Coverage', pct(totals.actual_token_coverage || 0), 'sessions_with_actual_tokens / sessions', '覆盖率越高，token 结论越接近真实消耗；低覆盖率时主要用于结构比较。'],
+            ].map(([label, value, formula, basis]) => (
+              <div key={label} className="rounded-xl bg-white/[0.02] border border-white/5 p-3 text-center">
+                <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{label}</div>
+                <div className="text-xl font-bold font-mono text-slate-200">{value}</div>
+                <MetricHint formula={formula} basis={basis} />
+              </div>
+            ))}
+          </div>
+
+          {(report.agent_mix || []).length > 0 && (
+            <div className="mb-5">
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2 font-medium">Agent Mix</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {(report.agent_mix || []).map(agent => (
+                  <div key={agent.agent_source} className="rounded-xl border border-white/5 bg-white/[0.015] p-3">
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <div className="text-sm font-semibold text-slate-200">{agent.agent_source}</div>
+                      <div className="text-xs font-mono text-slate-500">{agent.counted_tokens || 0} tokens</div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-[11px] text-slate-500">
+                      <div>{agent.sessions} sessions</div>
+                      <div>{agent.episodes} eps</div>
+                      <div>{agent.tool_calls} tools</div>
+                      <div>{pct(agent.avg_score || 0)} score</div>
+                    </div>
+                    <div className="text-[11px] text-slate-600 mt-2 truncate">
+                      Models: {(agent.models || []).join(', ') || 'unknown'}
+                    </div>
+                    <MetricHint
+                      formula="按 sessions.agent_source 聚合：Codex CLI + Claude Code 在同一 cwd/project_path 下合并"
+                      basis="用于比较不同 coding agent 的质量与消耗结构。PMO 应关注高 token 低评分的 agent/阶段，而不是只看总消耗。"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+            <div>
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2 font-medium">Lifecycle Stages</div>
+              <div className="space-y-2">
+                {(report.lifecycle_stages || []).map(stage => (
+                  <div key={stage.stage} className="rounded-xl border border-white/5 bg-white/[0.015] p-3">
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <div className="text-sm font-semibold text-slate-200">{stage.stage}</div>
+                      <div className="text-xs font-mono text-slate-500">{stage.counted_tokens || stage.estimated_tokens} tokens</div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-[11px] text-slate-500">
+                      <div>{stage.episodes} eps</div>
+                      <div>{pct(stage.token_share || 0)} share</div>
+                      <div>{stage.tool_calls} tools</div>
+                      <div>{pct(stage.avg_score || 0)} score</div>
+                    </div>
+                    <MetricHint
+                      formula="阶段由 episode_type 映射：Plan / Build / Validate / Release / Operate / Coordinate"
+                      basis="用于看项目生命周期中哪个阶段消耗最高，帮助 PMO 判断是否在 Build 阶段过度探索，或 Validate/Release 阶段投入不足。"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2 font-medium">Role Efficiency Ratio</div>
+              <div className="space-y-2">
+                {(report.role_effort || []).map(role => (
+                  <div key={role.role} className="rounded-xl border border-white/5 bg-white/[0.015] p-3">
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <div className="text-sm font-semibold text-slate-200 capitalize">{role.role}</div>
+                      <div className={`text-xs font-mono ${scoreClass(role.avg_score || 0)}`}>{pct(role.avg_score || 0)}</div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-[11px] text-slate-500">
+                      <div>{role.counted_tokens || role.estimated_tokens} tokens</div>
+                      <div>{pct(role.token_share || 0)} share</div>
+                      <div>{Math.round(role.tokens_per_score_point || 0)} tok/score</div>
+                    </div>
+                    <MetricHint
+                      formula="角色 token = episode counted tokens / 该 episode 参与评分角色数；tok/score = role tokens / score_total"
+                      basis="这是角色人效耗比的近似值，用于比较哪个角色消耗高但评分低。它指导过程改进，不应直接替代人工绩效评价。"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[10px] text-red-400/70 uppercase tracking-wider mb-2 font-medium">Top Token Conversations</div>
+            <div className="space-y-2">
+              {(report.top_conversations || []).map((conversation, i) => (
+                <div key={`${conversation.session_id}-${conversation.episode_id}`} className="rounded-xl border border-white/5 bg-white/[0.015] p-3">
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-[10px] text-slate-600 font-mono">#{i + 1}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 text-slate-400 border border-white/5">{conversation.lifecycle_stage}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 text-slate-500 border border-white/5">{conversation.agent_source}</span>
+                      <span className="text-sm text-slate-300 truncate">{conversation.user_requirement}</span>
+                    </div>
+                    <span className="text-xs font-mono text-red-300/80 shrink-0">{conversation.counted_tokens || conversation.estimated_tokens} tokens</span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-[11px] text-slate-500">
+                    <div>{conversation.turns} turns</div>
+                    <div>{conversation.tool_calls} tools</div>
+                    <div>{conversation.tool_io_tokens || 0} tool tok</div>
+                    <div>{conversation.duration_minutes} min</div>
+                    <div>{pct(conversation.score || 0)} score</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="text-xs text-slate-600 mt-3 leading-relaxed">{report.token_note}</div>
+          </div>
+        </GlassCard>
+      );
+    }
+
+    // ─── Role Card ───
+    function RoleCard({ title, score, details, deficiencies }) {
+      return (
+        <div className="glass-card flex flex-col animate-in">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-sm text-slate-300">{title}</h3>
+            <span className={`badge border ${scoreBg(score)}`}>{pct(score)}</span>
+          </div>
+
+          <div className="space-y-2.5 mb-4 flex-1">
+            {Object.entries(details || {}).map(([dim, val]) => (
+              <LinearProgress key={dim} value={val} label={dim} />
+            ))}
+          </div>
+
+          <div className="mt-auto pt-3 border-t border-white/5">
+            <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Deficiencies</div>
+            {(!deficiencies || deficiencies.length === 0) ? (
+              <div className="text-xs text-[#00d4aa]/70 flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-[#00d4aa]/50" />
+                No significant issues
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {deficiencies.slice(0, 3).map((d, i) => (
+                  <div key={i} className="text-xs text-red-300/70 truncate flex items-start gap-1.5">
+                    <span className="text-red-400/40 mt-0.5 shrink-0">•</span>
+                    <span className="truncate">{d}</span>
+                  </div>
+                ))}
+                {deficiencies.length > 3 && (
+                  <div className="text-[10px] text-slate-600">+{deficiencies.length - 3} more</div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Role Cards Grid ───
+    function RoleCardsGrid({ roleEvals }) {
+      const roleLabels = { product: 'Product', engineer: 'Engineer', qa: 'QA', techlead: 'Tech Lead' };
+      const roleOrder = ['product', 'engineer', 'qa', 'techlead'];
+
+      if (!roleEvals || !roleEvals.aggregated) {
+        return (
+          <GlassCard className="mb-6 animate-in text-slate-600 text-center py-8" delay={600}>
+            No role evaluation data yet
+          </GlassCard>
+        );
+      }
+
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {roleOrder.map((role) => {
+            return (
+              <RoleCard
+                key={role}
+                title={roleLabels[role]}
+                score={roleEvals.aggregated[role] || 0}
+                details={roleEvals.aggregated_details && roleEvals.aggregated_details[role] ? roleEvals.aggregated_details[role] : {}}
+                deficiencies={roleEvals.aggregated_deficiencies && roleEvals.aggregated_deficiencies[role] ? roleEvals.aggregated_deficiencies[role] : []}
+              />
+            );
+          })}
+        </div>
+      );
+    }
+
+    // ─── CEO Recommendations ───
+    function CeoRecommendations({ ceoReport }) {
+      if (!ceoReport) return null;
+
+      const hasIssues = ceoReport.top_issues && ceoReport.top_issues.length > 0;
+      const hasSuggestions = ceoReport.user_suggestions && ceoReport.user_suggestions.length > 0;
+
+      if (!hasIssues && !hasSuggestions) {
+        return (
+          <GlassCard className="mb-6 animate-in text-slate-600 text-center py-8" delay={700}>
+            No diagnostic suggestions
+          </GlassCard>
+        );
+      }
+
+      return (
+        <GlassCard className="mb-6 animate-in" delay={700}>
+          <SectionHeader title="Role & Input Recommendations" subtitle="项目角色诊断与输入改进建议" icon="◊" />
+
+          {hasSuggestions && (
+            <div className="mb-5">
+              <div className="text-[10px] text-[#00d4aa]/60 uppercase tracking-wider mb-2 font-medium">User Suggestions</div>
+              <div className="space-y-2">
+                {ceoReport.user_suggestions.map((s, i) => (
+                  <div key={`s-${i}`} className="flex gap-3 items-start p-3 bg-[#00d4aa]/[0.03] rounded-xl border border-[#00d4aa]/10">
+                    <span className="text-[#00d4aa]/50 text-sm shrink-0 mt-0.5">◈</span>
+                    <div className="text-sm text-[#00d4aa]/80 leading-relaxed">{s}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {hasIssues && (
+            <div className="space-y-3">
+              <div className="text-[10px] text-red-400/60 uppercase tracking-wider mb-2 font-medium">Issues</div>
+              {ceoReport.top_issues.map((issue, i) => (
+                <div key={i} className="flex gap-3 items-start p-3 bg-white/[0.02] rounded-xl border border-white/5">
+                  <div className="shrink-0 mt-0.5">
+                    <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-white/5 text-slate-400 border border-white/5">
+                      {issue.role}
+                    </span>
+                    <span className="ml-2 text-[10px] text-slate-600 font-mono">×{issue.frequency}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-red-300/80 mb-1">{issue.deficiency}</div>
+                    <div className="text-sm text-[#00d4aa]/70">→ {issue.recommendation}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </GlassCard>
+      );
+    }
+
+    // ─── View Tabs ───
+    function ViewTabs({ active, onChange }) {
+      const tabs = [
+        { id: 'pmo', label: 'Project PMO' },
+        { id: 'diagnostics', label: 'Diagnostics' },
+      ];
+
+      return (
+        <div className="flex items-center gap-1 p-1 rounded-lg bg-white/[0.025] border border-white/[0.06] mb-6 w-fit">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => onChange(tab.id)}
+              className={`px-4 py-2 rounded-md text-[13px] font-medium transition-all ${
+                active === tab.id
+                  ? 'bg-white/[0.08] text-slate-100 border border-white/[0.08]'
+                  : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.03] border border-transparent'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    // ─── Project PMO View ───
+    function ProjectPmoView({ projectReport, resourceReport, startupAudit }) {
+      return (
+        <>
+          <StartupAuditPanel report={startupAudit} />
+          <ProjectManagementPanel report={projectReport} />
+          <ResourceManagementPanel report={resourceReport} />
+          <MetricMethodology mode="executive" />
+        </>
+      );
+    }
+
+    // ─── Diagnostic View ───
+    function DiagnosticView({ ceoReport, roleEvals, episodes }) {
+      return (
+        <>
+          <TeamHealth ceoReport={ceoReport} />
+          <RoleCardsGrid roleEvals={roleEvals} />
+          <BidirectionalQuality ceoReport={ceoReport} />
+          <CeoRecommendations ceoReport={ceoReport} />
+          <MetricMethodology mode="diagnostic" />
+          <EpisodesTable
+            episodes={episodes}
+            roleEvalsByEpisode={roleEvals && roleEvals.by_episode ? roleEvals.by_episode : null}
+          />
+        </>
+      );
+    }
+
+    // ─── Turn Bubble ───
+    function TurnBubble({ turn }) {
+      const [collapsed, setCollapsed] = useState(true);
+      const isUser = !!turn.user_prompt;
+      const content = isUser ? turn.user_prompt : turn.assistant_response;
+      const maxLen = 300;
+      const shouldCollapse = content && content.length > maxLen;
+      const display = collapsed && shouldCollapse ? content.slice(0, maxLen) + '...' : content;
+
+      return (
+        <div className={`mb-4 ${isUser ? '' : 'pl-4 border-l border-white/5'}`}>
+          <div className={`flex items-center gap-2 mb-2`}>
+            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${isUser ? 'bg-[#00d4aa]/10 text-[#00d4aa]' : 'bg-[#6366f1]/10 text-[#6366f1]'}`}>
+              {isUser ? 'U' : 'A'}
+            </span>
+            <span className={`text-[11px] font-medium ${isUser ? 'text-[#00d4aa]/70' : 'text-[#6366f1]/70'}`}>
+              {isUser ? 'User' : 'Assistant'} · Turn {turn.turn_number}
+            </span>
+          </div>
+          <pre className="text-sm text-slate-300/80 whitespace-pre-wrap font-sans leading-relaxed pl-7">{display}</pre>
+          {shouldCollapse && (
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="text-[11px] text-slate-500 hover:text-[#00d4aa] mt-1 pl-7 transition-colors"
+            >
+              {collapsed ? 'Expand ▾' : 'Collapse ▴'}
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    // ─── Episodes Table ───
+    function EpisodesTable({ episodes, roleEvalsByEpisode }) {
+      const [expanded, setExpanded] = useState(new Set());
+      const [turnsCache, setTurnsCache] = useState({});
+
+      const toggle = async (id) => {
+        const next = new Set(expanded);
+        const isOpening = !next.has(id);
+        if (isOpening) {
+          next.add(id);
+          if (!turnsCache[id]) {
+            try {
+              const episode = episodes.find(ep => ep.id === id);
+              const data = await apiFetch(`/api/turns?session_id=${episode.session_id}&episode_id=${id}`);
+              setTurnsCache(prev => ({ ...prev, [id]: data.turns || [] }));
+            } catch (e) {
+              console.error('Failed to load turns:', e);
+            }
+          }
+        } else {
+          next.delete(id);
+        }
+        setExpanded(next);
+      };
+
+      if (!episodes || episodes.length === 0) {
+        return <GlassCard className="text-slate-600 text-center py-8">No episodes yet</GlassCard>;
+      }
+
+      const roleLabels = { product: 'Product', engineer: 'Engineer', qa: 'QA', techlead: 'Tech Lead' };
+
+      return (
+        <GlassCard className="animate-in" delay={800}>
+          <SectionHeader title="Episodes" subtitle="对话片段详情" icon="◇" />
+
+          <div className="space-y-2">
+            {episodes.map((ep, i) => {
+              const isOpen = expanded.has(ep.id);
+              const evals = roleEvalsByEpisode && roleEvalsByEpisode[ep.id] ? roleEvalsByEpisode[ep.id] : [];
+              const turns = turnsCache[ep.id] || [];
+
+              return (
+                <div key={ep.id} className="border border-white/5 rounded-xl overflow-hidden bg-white/[0.01]">
+                  <div
+                    className="flex items-center justify-between px-4 py-3 cursor-pointer episode-row"
+                    onClick={() => toggle(ep.id)}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className="font-mono text-[11px] text-slate-600 shrink-0">EP{i + 1}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 text-slate-400 shrink-0 border border-white/5">{ep.episode_type}</span>
+                      <span className="text-sm text-slate-300 truncate">{ep.user_requirement}</span>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0 ml-4">
+                      {(ep.prompt_score > 0 || ep.delivery_score > 0) && (
+                        <>
+                          <span className={`text-[10px] font-mono ${scoreClass(ep.prompt_score || 0)}`}>
+                            P {pct(ep.prompt_score || 0)}
+                          </span>
+                          <span className={`text-[10px] font-mono ${scoreClass(ep.delivery_score || 0)}`}>
+                            D {pct(ep.delivery_score || 0)}
+                          </span>
+                        </>
+                      )}
+                      {evals.map(e => (
+                        <span key={e.role} className={`text-[10px] font-mono ${scoreClass(e.score)}`}>
+                          {roleLabels[e.role]} {pct(e.score)}
+                        </span>
+                      ))}
+                      <span className="text-slate-600 text-xs transition-transform" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+                    </div>
+                  </div>
+
+                  {isOpen && (
+                    <div className="border-t border-white/5">
+                      <div className="px-4 py-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                          {evals.map(e => (
+                            <div key={e.role} className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="font-medium text-sm text-slate-300">{roleLabels[e.role]}</span>
+                                <span className={`text-sm font-bold font-mono ${scoreClass(e.score)}`}>{pct(e.score)}</span>
+                              </div>
+                              <div className="space-y-1 mb-2">
+                                {Object.entries(e.details || {}).map(([k, v]) => (
+                                  <div key={k} className="flex justify-between text-xs">
+                                    <span className="text-slate-600">{k}</span>
+                                    <span className={`font-mono ${scoreClass(v)}`}>{pct(v)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              {e.deficiencies && e.deficiencies.length > 0 && (
+                                <div className="space-y-0.5 pt-2 border-t border-white/5">
+                                  {e.deficiencies.map((d, di) => (
+                                    <div key={di} className="text-[11px] text-red-300/60">• {d}</div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {turns.length > 0 && (
+                        <div className="px-4 py-3 border-t border-white/5 bg-black/20">
+                          <div className="text-[10px] text-slate-600 uppercase tracking-wider mb-3 font-medium">Conversation</div>
+                          <div className="max-h-96 overflow-y-auto pr-2">
+                            {turns.map((turn) => (
+                              <div key={turn.turn_number}>
+                                {turn.user_prompt && (
+                                  <TurnBubble turn={{ ...turn, assistant_response: null }} />
+                                )}
+                                {turn.assistant_response && (
+                                  <TurnBubble turn={{ ...turn, user_prompt: null }} />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {isOpen && turns.length === 0 && (
+                        <div className="px-4 py-3 border-t border-white/5 text-sm text-slate-600">
+                          Loading conversation...
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </GlassCard>
+      );
+    }
+
+    // ─── Sidebar ───
+    function Sidebar({ projects, selectedProject, onSelect }) {
+      return (
+        <div className="w-60 bg-[#030305] border-r border-white/[0.04] flex flex-col sidebar">
+          <div className="p-5 border-b border-white/[0.04]">
+            <div className="flex items-center gap-2.5 mb-1">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#00d4aa]/20 to-[#6366f1]/20 flex items-center justify-center border border-white/10">
+                <span className="text-sm">◈</span>
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-slate-200">Sidecar</div>
+                <div className="text-[10px] text-slate-600">Virtual Team</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-3 space-y-0.5">
+            <div
+              className={`px-3 py-2 rounded-lg text-[13px] cursor-pointer transition-all ${!selectedProject ? 'sidebar-active bg-white/[0.04] text-slate-200' : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.02]'}`}
+              onClick={() => onSelect(null)}
+            >
+              Overview
+            </div>
+            <div className="px-3 py-1.5 text-[10px] text-slate-700 uppercase tracking-wider font-medium mt-3">Projects</div>
+            {projects.map(project => (
+              <div
+                key={project.project_path}
+                className={`px-3 py-2 rounded-lg text-[12px] cursor-pointer transition-all ${selectedProject === project.project_path ? 'sidebar-active bg-white/[0.04] text-slate-200' : 'text-slate-600 hover:text-slate-400 hover:bg-white/[0.02]'}`}
+                onClick={() => onSelect(project.project_path)}
+                title={project.project_path}
+              >
+                <div className="truncate">{project.project_name}</div>
+                <div className="text-[10px] text-slate-700 mt-0.5">{project.session_count} sessions</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="p-3 border-t border-white/[0.04]">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00d4aa] pulse-dot" />
+              <span className="text-[10px] text-slate-600">Collector active</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Main App ───
+    function App() {
+      const [projects, setProjects] = useState([]);
+      const [episodes, setEpisodes] = useState([]);
+      const [roleEvals, setRoleEvals] = useState(null);
+      const [ceoReport, setCeoReport] = useState(null);
+      const [projectReport, setProjectReport] = useState(null);
+      const [resourceReport, setResourceReport] = useState(null);
+      const [startupAudit, setStartupAudit] = useState(null);
+      const [companyAudit, setCompanyAudit] = useState(null);
+      const [overview, setOverview] = useState(null);
+      const [selectedProject, setSelectedProject] = useState(null);
+      const [activeView, setActiveView] = useState('pmo');
+      const [lastUpdate, setLastUpdate] = useState(new Date());
+      const [refreshing, setRefreshing] = useState(false);
+
+      const selectProject = useCallback((projectPath) => {
+        setSelectedProject(projectPath);
+        setActiveView('pmo');
+      }, []);
+
+      const refresh = useCallback(async () => {
+        setRefreshing(true);
+        try {
+          const projectParam = selectedProject ? encodeURIComponent(selectedProject) : '';
+          const [ov, projectRows, eps] = await Promise.all([
+            apiFetch('/api/overview'),
+            apiFetch('/api/projects'),
+            apiFetch(selectedProject ? `/api/episodes?project_path=${projectParam}` : '/api/episodes'),
+          ]);
+          setOverview(ov);
+          setProjects(projectRows);
+          setEpisodes(eps);
+
+          if (selectedProject) {
+            const [re, cr, pr, rr, sa] = await Promise.all([
+              apiFetch(`/api/role-evaluations?project_path=${projectParam}`),
+              apiFetch(`/api/ceo-report?project_path=${projectParam}`),
+              apiFetch(`/api/project-management-report?project_path=${projectParam}`),
+              apiFetch(`/api/project-resource-report?project_path=${projectParam}`),
+              apiFetch(`/api/startup-audit?project_path=${projectParam}`),
+            ]);
+            setRoleEvals(re);
+            setCeoReport(cr);
+            setProjectReport(pr);
+            setResourceReport(rr);
+            setStartupAudit(sa);
+            setCompanyAudit(null);
+          } else {
+            const ca = await apiFetch('/api/company-audit');
+            setRoleEvals(null);
+            setCeoReport(null);
+            setProjectReport(null);
+            setResourceReport(null);
+            setStartupAudit(null);
+            setCompanyAudit(ca);
+          }
+          setLastUpdate(new Date());
+        } catch (e) {
+          console.error('Fetch error:', e);
+        } finally {
+          setTimeout(() => setRefreshing(false), 500);
+        }
+      }, [selectedProject]);
+
+      useEffect(() => {
+        refresh();
+      }, [refresh]);
+
+      return (
+        <div className="flex h-screen relative z-10">
+          <Sidebar projects={projects} selectedProject={selectedProject} onSelect={selectProject} />
+
+          <div className="flex-1 overflow-y-auto">
+            <div className="sticky top-0 z-20 backdrop-blur-xl bg-[#030305]/80 border-b border-white/[0.04] px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-lg font-semibold text-slate-200">Dashboard</h1>
+                  <p className="text-[11px] text-slate-600 mt-0.5">
+                    {selectedProject
+                      ? selectedProject
+                      : 'Select a project to view analysis'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-[11px] text-slate-700 font-mono">{lastUpdate.toLocaleTimeString('zh-CN')}</span>
+                  <button
+                    onClick={refresh}
+                    className="px-4 py-2 rounded-lg text-[13px] font-medium bg-white/[0.04] border border-white/[0.06] text-slate-300 hover:bg-white/[0.08] hover:border-white/[0.1] transition-all flex items-center gap-2"
+                    disabled={refreshing}
+                  >
+                    <span className={`inline-block ${refreshing ? 'animate-spin' : ''}`}>↻</span>
+                    Refresh
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 max-w-6xl mx-auto">
+              {!selectedProject ? (
+                <div className="animate-in">
+                  <GlobalOverview data={overview} />
+                  <CompanyAuditPanel report={companyAudit} />
+                  <ProjectOverview projects={projects} onSelect={selectProject} />
+                </div>
+              ) : (
+                <>
+                  <ViewTabs active={activeView} onChange={setActiveView} />
+                  {activeView === 'pmo' ? (
+                    <ProjectPmoView projectReport={projectReport} resourceReport={resourceReport} startupAudit={startupAudit} />
+                  ) : (
+                    <DiagnosticView
+                      ceoReport={ceoReport}
+                      roleEvals={roleEvals}
+                      episodes={episodes}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

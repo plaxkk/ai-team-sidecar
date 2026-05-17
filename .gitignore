@@ -1,0 +1,13 @@
+node_modules/
+dist/
+data/
+*.db
+*.db-wal
+*.db-shm
+feedback-pipe
+.gstack/
+.DS_Store
+.env
+.env.*
+!.env.example
+.claude/settings.local.json

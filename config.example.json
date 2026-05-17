@@ -1,0 +1,13 @@
+{
+  "dataDir": "~/.virtual-team-sidecar/data",
+  "dashboardPort": 4041,
+  "projects": [],
+  "agents": {
+    "claudeCode": true,
+    "codexCli": true
+  },
+  "privacy": {
+    "storeRawPayload": true,
+    "storeToolOutput": true
+  }
+}

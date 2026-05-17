@@ -1,0 +1,28 @@
+{
+  "name": "virtual-team-sidecar",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "setup": "node --loader ts-node/esm bin/setup.ts",
+    "install:claude-hooks": "node --loader ts-node/esm bin/install-claude-hooks.ts",
+    "daemon": "node --loader ts-node/esm src/collector/daemon.ts",
+    "dashboard": "node --loader ts-node/esm src/dashboard/server.ts",
+    "start": "bash bin/start.sh",
+    "backfill": "node --loader ts-node/esm bin/backfill.ts",
+    "backfill:claude": "node --loader ts-node/esm bin/backfill.ts",
+    "sync:codex": "node --loader ts-node/esm bin/sync-codex.ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "express": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.0"
+  }
+}
