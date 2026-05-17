@@ -19,10 +19,10 @@ console.log(JSON.stringify({
   hooks_dir: hooksDir,
   dashboard_url: `http://localhost:${config.dashboardPort}`,
   next_steps: [
-    'Edit config projects if you want to restrict monitored repositories.',
-    'Keep privacy.storeRawPayload=false and privacy.storeToolOutput=false unless you explicitly need raw payload diagnostics.',
-    'Run npm run install:claude-hooks to generate Claude Code hook scripts.',
     'Run npm run start to launch collector and dashboard.',
+    'Optional: run npm run install:claude-hooks if you want Claude Code collection.',
+    'Optional: edit config projects only if you want to restrict monitored repositories.',
+    'Keep privacy.storeRawPayload=false and privacy.storeToolOutput=false unless you explicitly need raw payload diagnostics.',
   ],
   config,
 }, null, 2));

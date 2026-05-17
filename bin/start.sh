@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
-PIPE="$DIR/data/feedback-pipe"
 
-# Create FIFO if needed
-mkdir -p "$DIR/data"
-if [[ ! -p "$PIPE" ]]; then
-  mkfifo "$PIPE" 2>/dev/null || true
-fi
+echo "Preparing local config and data..."
+node --loader ts-node/esm "$DIR/bin/setup.ts" >/dev/null
+DASHBOARD_URL="$(node --loader ts-node/esm "$DIR/bin/dashboard-url.ts")"
 
 # Start collector daemon in background
 echo "Starting collector daemon..."
@@ -17,7 +14,7 @@ DAEMON_PID=$!
 echo "  Daemon PID: $DAEMON_PID"
 
 # Start dashboard
-echo "Starting dashboard on http://localhost:4041..."
+echo "Starting dashboard..."
 node --loader ts-node/esm "$DIR/src/dashboard/server.ts" &
 DASH_PID=$!
 echo "  Dashboard PID: $DASH_PID"
@@ -25,7 +22,7 @@ echo "  Dashboard PID: $DASH_PID"
 echo ""
 echo "AI Team Sidecar is running."
 echo "  Daemon:   PID $DAEMON_PID"
-echo "  Dashboard: PID $DASH_PID  →  http://localhost:4041"
+echo "  Dashboard: PID $DASH_PID  ->  $DASHBOARD_URL"
 echo ""
 echo "Press Ctrl+C to stop both."
 

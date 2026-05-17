@@ -17,8 +17,6 @@ Everything runs locally by default. Conversation data is stored in your local SQ
 
 ```bash
 npm install
-npm run setup
-npm run doctor
 npm run start
 ```
 
@@ -28,7 +26,23 @@ Open:
 http://localhost:4041
 ```
 
-For a first project, edit `~/.ai-team-sidecar/config.json` and set `projects` to the repository paths you want to monitor. Keeping a project allowlist is the simplest way to avoid collecting unrelated local conversations.
+That is enough for Codex CLI data: the dashboard reads local Codex sessions from the default Codex state path when available and groups them by repository `cwd`.
+
+Claude Code collection is optional because it requires adding hooks to Claude Code settings:
+
+```bash
+npm run install:claude-hooks
+```
+
+The command prints the settings snippet to add. After that, keep `npm run start` running while you use Claude Code.
+
+Optional checks:
+
+```bash
+npm run doctor
+```
+
+You only need to edit `~/.ai-team-sidecar/config.json` if you want to restrict monitoring to specific repositories. With the default empty `projects` list, Sidecar accepts every project `cwd` it sees.
 
 ## Configuration
 
