@@ -156,6 +156,46 @@
 
 ---
 
+## 开发规范
+
+### 分支命名规范
+
+所有开发分支必须遵循以下格式：
+
+```
+{类型}/{简短描述}-{YYYY-MM-DD}
+```
+
+**类型**：
+- `feature/` — 新功能
+- `fix/` — bug 修复
+- `refactor/` — 重构
+- `chore/` — 杂项（配置、文档等）
+
+**描述规则**：
+- 使用英文，kebab-case（短横线连接）
+- 不超过 5 个词，突出核心变更
+- 不要用 issue 编号代替描述
+
+**示例**：
+```
+feature/optimization-loop-workflow-2026-05-19
+fix/dashboard-api-pagination-2026-05-19
+refactor/collector-fifo-error-handling-2026-05-20
+chore/update-claude-md-rules-2026-05-20
+```
+
+### 提交信息规范
+
+使用 Conventional Commits 格式：
+```
+{type}: {description}
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+```
+
+---
+
 ## 质量红线
 
 以下行为会直接影响角色评分：
