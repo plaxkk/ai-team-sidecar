@@ -58,6 +58,10 @@ Open:
 http://localhost:4041
 ```
 
+<p align="center">
+  <img src="./docs/assets/dashboard.jpg" alt="AI Team Sidecar Dashboard" width="860">
+</p>
+
 That is enough for Codex CLI data: the dashboard reads local Codex sessions from the default Codex state path when available and groups them by repository `cwd`.
 
 Claude Code collection is optional because it requires adding hooks to Claude Code settings:
