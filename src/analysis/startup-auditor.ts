@@ -39,6 +39,7 @@ interface AuditInput {
   episodes: AuditEpisode[];
   roleScores: Record<string, number>;
   projectReport: ProjectManagementReport;
+  deployCount?: number;
 }
 
 export function auditStartupProject(input: AuditInput): StartupAuditReport {
@@ -82,6 +83,9 @@ export function auditStartupProject(input: AuditInput): StartupAuditReport {
     - Math.min(16, emptyResponseCount * 4)
   );
 
+  // Deploy data bonus: actual deploys boost validation signal
+  const deployBonus = (input.deployCount && input.deployCount > 0) ? 8 : 0;
+
   const startupExcellence = clampScore(
     100
     - Math.round((1 - (projectReport.efficiency_score || 0.5)) * 24)
@@ -90,6 +94,7 @@ export function auditStartupProject(input: AuditInput): StartupAuditReport {
     - (hasMvpLanguage ? 0 : 10)
     - (hasValidation ? 0 : 10)
     - Math.min(18, overEngineeringHits * 4)
+    + deployBonus
   );
 
   const highlights = deriveHighlights({

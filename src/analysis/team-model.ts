@@ -1,4 +1,4 @@
-export type CoreRole = 'product' | 'engineer' | 'qa' | 'techlead';
+export type CoreRole = 'product' | 'engineer' | 'creative_review' | 'qa' | 'techlead';
 export type OptionalRole = 'growth' | 'ops' | 'domain_expert';
 export type TeamRole = CoreRole | OptionalRole;
 
@@ -21,9 +21,9 @@ export interface RoleExpectation {
 
 const TASK_RULES: Record<ProjectTaskType, RoleExpectation> = {
   feature: {
-    required: ['product', 'engineer', 'qa', 'techlead'],
+    required: ['product', 'engineer', 'creative_review', 'qa', 'techlead'],
     optional: [],
-    rationale: 'Feature work needs a spec, implementation plan, validation, and delivery decision.',
+    rationale: 'Feature work needs a spec, creative review, implementation plan, validation, and delivery decision.',
   },
   bugfix: {
     required: ['engineer', 'qa', 'techlead'],
@@ -41,9 +41,9 @@ const TASK_RULES: Record<ProjectTaskType, RoleExpectation> = {
     rationale: 'Operation work needs goals, execution ownership, and domain context.',
   },
   planning: {
-    required: ['product', 'techlead'],
+    required: ['product', 'creative_review', 'techlead'],
     optional: ['domain_expert'],
-    rationale: 'Planning work needs a clear scope, assumptions, and decision points.',
+    rationale: 'Planning work needs a clear scope, creative alternatives, assumptions, and decision points.',
   },
   role_planning: {
     required: ['product', 'techlead'],
@@ -61,9 +61,9 @@ const TASK_RULES: Record<ProjectTaskType, RoleExpectation> = {
     rationale: 'Continuation turns should summarize state and next action without forcing a full team ceremony.',
   },
   task: {
-    required: ['product', 'engineer', 'qa', 'techlead'],
+    required: ['product', 'engineer', 'creative_review', 'qa', 'techlead'],
     optional: [],
-    rationale: 'General delivery work defaults to the full core team.',
+    rationale: 'General delivery work defaults to the full core team with creative review.',
   },
 };
 

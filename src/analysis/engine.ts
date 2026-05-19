@@ -6,6 +6,7 @@ import { groupEpisodes, getTurnsForSession } from './episode-grouper.js';
 import { analyzeRequirement } from './requirement-analyzer.js';
 import { calculateMetrics } from './metrics.js';
 import { evaluateAllRoles } from './role-evaluator.js';
+import { evaluateCreativeReview } from './creative-review.js';
 import { evaluatePrompt } from './prompt-evaluator.js';
 import { evaluateDelivery } from './delivery-evaluator.js';
 import { generateCeoReport } from './ceo-report.js';
@@ -138,6 +139,23 @@ export async function runAnalysis(db: Database.Database, sessionId: string) {
         JSON.stringify(ev.deficiencies)
       );
     }
+
+    // 4b. Creative Review evaluation (additional)
+    const crEval = evaluateCreativeReview(firstPrompt, fullResponse);
+    insertRoleEval.run(
+      sessionId,
+      episodeId,
+      'creative_review',
+      crEval.score,
+      JSON.stringify({
+        has_multiple_proposals: crEval.has_multiple_proposals,
+        has_counter_opinion: crEval.has_counter_opinion,
+        has_user_evidence: crEval.has_user_evidence,
+        feasibility_score: crEval.feasibility_score,
+        commercial_score: crEval.commercial_score,
+      }),
+      JSON.stringify(crEval.deficiencies)
+    );
   }
 
   // 5. Generate CEO report

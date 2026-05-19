@@ -1,5 +1,5 @@
-// Per-role evaluation: Product, Engineer, QA, Tech Lead
-export type Role = 'product' | 'engineer' | 'qa' | 'techlead';
+// Per-role evaluation: Product, Engineer, Creative Review, QA, Tech Lead
+export type Role = 'product' | 'engineer' | 'creative_review' | 'qa' | 'techlead';
 
 export interface RoleEvaluation {
   role: Role;
@@ -231,12 +231,52 @@ function evaluateTechLead(_userPrompt: string, response: string): RoleEvaluation
   return { role: 'techlead', score: Math.round(score * 100) / 100, details, deficiencies };
 }
 
+// ─── Creative Review Role ───
+
+function evaluateCreativeReview(_userPrompt: string, response: string): RoleEvaluation {
+  const details: Record<string, number> = {};
+  const deficiencies: string[] = [];
+
+  const crSection = extractRoleSection(response, 'creative_review');
+  const section = crSection || response;
+
+  // 1. Multi-proposal coverage (30%)
+  const hasMultiple = /(?:方案|option|approach|alternative)[\sAB]{0,3}[12AB一二两]/i.test(section) ||
+    (section.match(/(?:方案|option|approach|alternative)/gi) || []).length >= 2;
+  details['多方案覆盖'] = hasMultiple ? 1 : 0;
+  if (!hasMultiple) deficiencies.push('未提供多个备选方案');
+
+  // 2. Counter opinion / Devil's advocate (25%)
+  const hasCounter = /反对|counter|风险|risk|缺点|drawback|局限|limitation|devil'?s?\s*advocate|魔鬼代言人|替代|alternative/i.test(section);
+  details['反面意见'] = hasCounter ? 1 : 0;
+  if (!hasCounter) deficiencies.push('缺少反面意见或魔鬼代言人分析');
+
+  // 3. User evidence (25%)
+  const hasEvidence = /访谈|interview|用户调研|survey|数据|data|验证|validated|测试用户|beta|用户说/i.test(section);
+  details['用户证据'] = hasEvidence ? 1 : 0;
+  if (!hasEvidence) deficiencies.push('缺少用户证据');
+
+  // 4. Commercial value (20%)
+  const hasCommercial = /转化|conversion|收入|revenue|留存|retention|获客|acquisition|GMV|ARPU|商业|monetiz/i.test(section);
+  details['商业价值'] = hasCommercial ? 1 : 0;
+  if (!hasCommercial) deficiencies.push('缺少商业价值分析');
+
+  const score =
+    0.30 * details['多方案覆盖'] +
+    0.25 * details['反面意见'] +
+    0.25 * details['用户证据'] +
+    0.20 * details['商业价值'];
+
+  return { role: 'creative_review', score: Math.round(score * 100) / 100, details, deficiencies };
+}
+
 // ─── Orchestrator ───
 
 export function evaluateAllRoles(userPrompt: string, response: string): RoleEvaluation[] {
   return [
     evaluateProduct(userPrompt, response),
     evaluateEngineer(userPrompt, response),
+    evaluateCreativeReview(userPrompt, response),
     evaluateQA(userPrompt, response),
     evaluateTechLead(userPrompt, response),
   ];
@@ -248,6 +288,7 @@ function extractRoleSection(response: string, role: Role): string {
   const rolePatterns: Record<Role, RegExp[]> = {
     product: [/##\s*Product/i, /产品理解/i, /Engineering Task Spec/i],
     engineer: [/##\s*ENGINEER/i, /##\s*Engineer/i, /技术方案/i],
+    creative_review: [/##\s*Creative\s*Review/i, /##\s*CREATIVE\s*REVIEW/i, /创意审查/i],
     qa: [/##\s*QA/i, /质量审查/i, /风险等级/i],
     techlead: [/##\s*TECH\s*LEAD/i, /##\s*Tech\s*Lead/i, /决策信息/i, /是否执行/i],
   };

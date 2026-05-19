@@ -11,6 +11,7 @@ export interface SidecarConfig {
   dataDir: string;
   dashboardPort: number;
   projects: SidecarProjectConfig[];
+  preset?: 'solo-founder';
   agents: {
     claudeCode: boolean;
     codexCli: boolean;

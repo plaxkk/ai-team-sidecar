@@ -66,7 +66,10 @@ export function evaluatePrompt(prompt: string): PromptEvaluation {
   const hasScope = /(?:范围|scope|涉及|包括|修改|添加|删除|创建|实现|修复)/i.test(text);
   const hasConstraints = /(?:限制|约束|constraint|条件|前提|必须|不能|注意|别|不要)/i.test(text);
   const completenessParts = [hasGoal, hasScope, hasConstraints].filter(Boolean).length;
-  const completeness = completenessParts / 3;
+  let completeness = completenessParts / 3;
+  // Founder Brief alignment signal boosts completeness
+  const hasBriefAlignment = /founder\s*brief|创始人简报|目标用户.*痛点|P0.*范围|不做什么.*成功指标/i.test(text);
+  if (hasBriefAlignment) completeness = Math.min(1, completeness + 0.05);
   details['完整性'] = Math.round(completeness * 100) / 100;
   dimensions['完整性'] = {
     score: details['完整性'],

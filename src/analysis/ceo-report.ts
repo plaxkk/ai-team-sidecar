@@ -7,6 +7,7 @@ export interface CeoReport {
   role_scores: {
     product: number;
     engineer: number;
+    creative_review: number;
     qa: number;
     techlead: number;
   };
@@ -71,6 +72,12 @@ const DEFICIENCY_RECOMMENDATIONS: Record<string, { pattern: RegExp; recommendati
     { pattern: /未有效综合各角色信息/, recommendation: '建议强化 Tech Lead 总结模板，要求显式引用 Product/Engineer/QA 的结论' },
     { pattern: /Tech Lead 段落过短/, recommendation: '建议设定 Tech Lead 段落最小长度要求（如 200 字符）' },
   ],
+  creative_review: [
+    { pattern: /未提供多个备选方案/, recommendation: '建议添加规则："Creative Review 必须提供至少 2 个备选方案"' },
+    { pattern: /缺少反面意见/, recommendation: '建议添加规则："Creative Review 必须包含反面意见或魔鬼代言人分析"' },
+    { pattern: /缺少用户证据/, recommendation: '建议添加规则："Creative Review 必须引用用户证据（访谈、调研、数据）"' },
+    { pattern: /缺少商业价值分析/, recommendation: '建议添加规则："Creative Review 必须评估商业价值（转化、收入、留存）"' },
+  ],
 };
 
 export function generateCeoReport(
@@ -87,8 +94,8 @@ export function generateCeoReport(
   }
 ): CeoReport {
   // Role scores: average of all evaluations for each role
-  const roleScores: CeoReport['role_scores'] = { product: 0, engineer: 0, qa: 0, techlead: 0 };
-  const roleCounts: Record<string, number> = { product: 0, engineer: 0, qa: 0, techlead: 0 };
+  const roleScores: CeoReport['role_scores'] = { product: 0, engineer: 0, creative_review: 0, qa: 0, techlead: 0 };
+  const roleCounts: Record<string, number> = { product: 0, engineer: 0, creative_review: 0, qa: 0, techlead: 0 };
 
   for (const ev of evaluations) {
     roleScores[ev.role] += ev.score;
@@ -101,11 +108,12 @@ export function generateCeoReport(
       : 0;
   }
 
-  // Team health: weighted average of role scores
-  const weights = { product: 0.30, engineer: 0.30, qa: 0.20, techlead: 0.20 };
+  // Team health: weighted average of role scores (5 roles)
+  const weights = { product: 0.25, engineer: 0.25, creative_review: 0.10, qa: 0.20, techlead: 0.20 };
   const teamHealth =
     weights.product * roleScores.product +
     weights.engineer * roleScores.engineer +
+    weights.creative_review * roleScores.creative_review +
     weights.qa * roleScores.qa +
     weights.techlead * roleScores.techlead;
 

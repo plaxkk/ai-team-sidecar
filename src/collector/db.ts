@@ -161,6 +161,37 @@ function initSchema(db: Database.Database) {
       applied_at INTEGER
     );
 
+    CREATE TABLE IF NOT EXISTS weekly_reviews (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_path TEXT,
+      week_start INTEGER,
+      week_end INTEGER,
+      label TEXT,
+      project_status TEXT,
+      health_trend TEXT,
+      review_json TEXT,
+      generated_at INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS deploy_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_path TEXT,
+      deploy_at INTEGER,
+      commit_hash TEXT,
+      commit_message TEXT,
+      deploy_type TEXT DEFAULT 'push_to_main'
+    );
+
+    CREATE TABLE IF NOT EXISTS business_signals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_path TEXT,
+      signal_type TEXT,
+      signal_value REAL,
+      signal_unit TEXT,
+      captured_at INTEGER,
+      notes TEXT
+    );
+
     CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id);
     CREATE INDEX IF NOT EXISTS idx_events_type ON events(event_type);
     CREATE INDEX IF NOT EXISTS idx_turns_session ON turns(session_id);
@@ -169,6 +200,9 @@ function initSchema(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_project_reports_session ON project_reports(session_id);
     CREATE INDEX IF NOT EXISTS idx_project_audit_path ON project_audit_reports(project_path, generated_at);
     CREATE INDEX IF NOT EXISTS idx_rule_feedback_project ON rule_feedback_items(project_path, status);
+    CREATE INDEX IF NOT EXISTS idx_weekly_reviews_project ON weekly_reviews(project_path, week_start);
+    CREATE INDEX IF NOT EXISTS idx_deploy_events_project ON deploy_events(project_path, deploy_at);
+    CREATE INDEX IF NOT EXISTS idx_business_signals_project ON business_signals(project_path, signal_type);
   `);
 
   // Schema migrations for existing databases

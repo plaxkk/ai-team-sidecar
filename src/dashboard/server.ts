@@ -8,6 +8,10 @@ import { buildProjectManagementReport, getLatestProjectManagementReport, Project
 import { auditStartupProject } from '../analysis/startup-auditor.js';
 import { buildOrganizationAudit, ProjectOrganizationInput } from '../analysis/organization-auditor.js';
 import { loadConfig } from '../config.js';
+import { BRIEF_TEMPLATE, parseFounderBrief, validateFounderBrief } from '../analysis/founder-brief.js';
+import { generateWeeklyReview } from '../analysis/weekly-review.js';
+import { evaluateBusinessMetrics } from '../analysis/business-metrics.js';
+import { parseGitDeploys } from '../collector/git-collector.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -388,6 +392,121 @@ app.post('/api/rule-feedback/apply', (req, res) => {
   const block = `\n\n## Sidecar Rule Feedback - ${new Date().toISOString()}\n\n${suggestedPatch}\n`;
   fs.appendFileSync(targetPath, block, 'utf8');
   res.json({ status: 'applied', target_file: targetFile, bytes_appended: Buffer.byteLength(block) });
+});
+
+// Founder Brief template
+app.get('/api/founder-brief-template', (_req, res) => {
+  res.json({ template: BRIEF_TEMPLATE });
+});
+
+// Validate a Founder Brief
+app.post('/api/validate-brief', (req, res) => {
+  const { prompt } = req.body || {};
+  if (!prompt) {
+    res.status(400).json({ error: 'prompt required' });
+    return;
+  }
+  const brief = parseFounderBrief(prompt);
+  if (!brief) {
+    res.json({ found: false, validation: null });
+    return;
+  }
+  const validation = validateFounderBrief(brief);
+  res.json({ found: true, brief, validation });
+});
+
+// Weekly CEO Review for a project
+app.get('/api/weekly-review', (req, res) => {
+  const db = getDb();
+  const projectPath = req.query.project_path as string;
+  if (!projectPath) {
+    res.status(400).json({ error: 'project_path required' });
+    return;
+  }
+
+  const now = Date.now();
+  const weekEnd = now;
+  const weekStart = now - 7 * 24 * 60 * 60 * 1000;
+
+  const review = generateWeeklyReview(db, projectPath, weekStart, weekEnd);
+
+  // Persist
+  db.prepare(
+    `INSERT INTO weekly_reviews (project_path, week_start, week_end, label, project_status, health_trend, review_json, generated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    projectPath,
+    review.period.week_start,
+    review.period.week_end,
+    review.period.label,
+    review.project_status,
+    review.management_health_trend,
+    JSON.stringify(review),
+    Date.now()
+  );
+
+  res.json(review);
+});
+
+// List all weekly reviews for a project
+app.get('/api/weekly-reviews', (req, res) => {
+  const db = getDb();
+  const projectPath = req.query.project_path as string;
+  if (!projectPath) {
+    res.status(400).json({ error: 'project_path required' });
+    return;
+  }
+
+  const rows = db.prepare(
+    `SELECT week_start, week_end, label, project_status, health_trend, generated_at
+     FROM weekly_reviews
+     WHERE project_path = ?
+     ORDER BY week_start DESC`
+  ).all(projectPath);
+
+  res.json(rows);
+});
+
+// Business metrics for a project (DORA + custom signals)
+app.get('/api/business-metrics', (req, res) => {
+  const db = getDb();
+  const projectPath = req.query.project_path as string;
+  if (!projectPath) {
+    res.status(400).json({ error: 'project_path required' });
+    return;
+  }
+
+  // Parse git deploys and store them
+  const deploys = parseGitDeploys(projectPath);
+  if (deploys.length > 0) {
+    const insertDeploy = db.prepare(
+      `INSERT OR IGNORE INTO deploy_events (project_path, deploy_at, commit_hash, commit_message, deploy_type)
+       VALUES (?, ?, ?, ?, ?)`
+    );
+    for (const deploy of deploys) {
+      insertDeploy.run(projectPath, deploy.deploy_at, deploy.commit_hash, deploy.commit_message, deploy.deploy_type);
+    }
+  }
+
+  const metrics = evaluateBusinessMetrics(db, projectPath);
+  res.json(metrics);
+});
+
+// Record a business signal
+app.post('/api/business-signals', (req, res) => {
+  const db = getDb();
+  const { project_path, signal_type, signal_value, signal_unit, notes } = req.body || {};
+  if (!project_path || !signal_type || signal_value === undefined) {
+    res.status(400).json({ error: 'project_path, signal_type and signal_value required' });
+    return;
+  }
+
+  db.prepare(
+    `INSERT INTO business_signals (project_path, signal_type, signal_value, signal_unit, captured_at, notes)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run(project_path, signal_type, signal_value, signal_unit || '', Date.now(), notes || '');
+
+  res.json({ status: 'recorded', project_path, signal_type, signal_value });
 });
 
 app.listen(PORT, () => {

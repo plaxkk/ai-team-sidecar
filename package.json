@@ -13,7 +13,8 @@
     "start": "bash bin/start.sh",
     "backfill": "node --loader ts-node/esm bin/backfill.ts",
     "backfill:claude": "node --loader ts-node/esm bin/backfill.ts",
-    "sync:codex": "node --loader ts-node/esm bin/sync-codex.ts"
+    "sync:codex": "node --loader ts-node/esm bin/sync-codex.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",
@@ -24,6 +25,7 @@
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.6"
   }
 }

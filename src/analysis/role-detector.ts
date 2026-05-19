@@ -5,6 +5,7 @@ export interface RoleDetection {
   has_engineer: boolean;
   has_qa: boolean;
   has_techlead: boolean;
+  has_creative_review: boolean;
   sections: { role: string; start: number; end: number; content: string }[];
 }
 
@@ -20,6 +21,13 @@ const ROLE_PATTERNS: Record<string, RegExp[]> = {
     /技术方案/i,
     /代码修改/i,
     /## Engineer/i,
+  ],
+  creative_review: [
+    /## Creative Review/i,
+    /## CREATIVE REVIEW/i,
+    /创意审查/i,
+    /方案\s*[AB一二]/i,
+    /Option\s*[12]/i,
   ],
   qa: [
     /## QA/i,
@@ -38,7 +46,7 @@ const ROLE_PATTERNS: Record<string, RegExp[]> = {
 export function detectRoles(response: string): RoleDetection {
   const sections: RoleDetection['sections'] = [];
   const roles: string[] = [];
-  let has_product = false, has_engineer = false, has_qa = false, has_techlead = false;
+  let has_product = false, has_engineer = false, has_qa = false, has_techlead = false, has_creative_review = false;
 
   for (const [role, patterns] of Object.entries(ROLE_PATTERNS)) {
     for (const pattern of patterns) {
@@ -50,6 +58,7 @@ export function detectRoles(response: string): RoleDetection {
           case 'engineer': has_engineer = true; break;
           case 'qa': has_qa = true; break;
           case 'techlead': has_techlead = true; break;
+          case 'creative_review': has_creative_review = true; break;
         }
         // Extract section content (from match to next ## or end)
         const startIdx = match.index ?? 0;
@@ -66,5 +75,5 @@ export function detectRoles(response: string): RoleDetection {
     }
   }
 
-  return { roles, has_product, has_engineer, has_qa, has_techlead, sections };
+  return { roles, has_product, has_engineer, has_qa, has_techlead, has_creative_review, sections };
 }

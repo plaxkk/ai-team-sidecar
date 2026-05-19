@@ -17,6 +17,29 @@ export function analyzePromptIssues(prompt: string): PromptIssueAnalysis {
   const text = (prompt || '').trim();
   const issues: PromptIssue[] = [];
 
+  // Check for Founder Brief and validate completeness
+  const hasBriefMarker = /founder\s*brief|创始人简报|简报模板/i.test(text);
+  if (hasBriefMarker) {
+    const briefFieldPatterns = [
+      { label: '目标用户', pattern: /目标用户[：:]/i },
+      { label: '痛点', pattern: /痛点[：:]/i },
+      { label: 'P0 范围', pattern: /P0\s*范围[：:]/i },
+      { label: '不做什么', pattern: /不做什么[：:]/i },
+      { label: '成功指标', pattern: /成功指标[：:]/i },
+      { label: '验证方式', pattern: /验证方式[：:]/i },
+      { label: '截止日期', pattern: /截止日期[：:]/i },
+    ];
+    const missingBriefFields = briefFieldPatterns.filter(f => !f.pattern.test(text)).map(f => f.label);
+    if (missingBriefFields.length > 0) {
+      issues.push({
+        category: 'brief_completeness',
+        severity: 'high',
+        issue: `Founder Brief 缺少字段：${missingBriefFields.join('、')}`,
+        suggestion: `补齐 Founder Brief 中的：${missingBriefFields.join('、')}`,
+      });
+    }
+  }
+
   if (!/(目标|目的|期望|实现|修复|添加|建立|完成|goal|objective|expected|implement|fix|add)/i.test(text)) {
     issues.push({
       category: '目标',

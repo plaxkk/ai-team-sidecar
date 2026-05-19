@@ -15,6 +15,7 @@ export interface TeamEvaluation {
 const ROLE_BOUNDARIES: Record<CoreRole, RegExp[]> = {
   product: [/Engineering Task Spec/i, /目标|用户场景|期望行为|成功指标|优先级/],
   engineer: [/系统理解|技术方案|代码修改|diff|patch|实现/],
+  creative_review: [/Creative Review|方案对比|备选方案|魔鬼代言人|反面意见|商业价值/],
   qa: [/QA|质量审查|边界|风险等级|测试|验证/],
   techlead: [/Tech Lead|执行建议|Go|No-Go|决策点|方案总结/],
 };
@@ -28,7 +29,7 @@ export function evaluateTeamComposition(
   const expectation = getRoleExpectation(taskType);
   const optionalRoles = detectOptionalRoles(prompt, response);
   const presentCore = detectedRoles.filter((r): r is CoreRole =>
-    ['product', 'engineer', 'qa', 'techlead'].includes(r)
+    ['product', 'engineer', 'creative_review', 'qa', 'techlead'].includes(r)
   );
   const present = [...new Set<TeamRole>([...presentCore, ...optionalRoles])];
 

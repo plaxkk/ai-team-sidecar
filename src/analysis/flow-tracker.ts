@@ -7,11 +7,11 @@ export interface FlowResult {
   step_depths: Record<string, number>;
 }
 
-const ROLE_ORDER = ['product', 'engineer', 'qa', 'techlead'];
+const ROLE_ORDER = ['product', 'engineer', 'creative_review', 'qa', 'techlead'];
 const MIN_SECTION_DEPTH = 100; // chars
 
 export function trackFlow(
-  roleDetection: { has_product: boolean; has_engineer: boolean; has_qa: boolean; has_techlead: boolean; sections: { role: string; content: string; start: number }[] },
+  roleDetection: { has_product: boolean; has_engineer: boolean; has_qa: boolean; has_techlead: boolean; has_creative_review?: boolean; sections: { role: string; content: string; start: number }[] },
   response: string
 ): FlowResult {
   const violations: string[] = [];
@@ -22,10 +22,11 @@ export function trackFlow(
   const present: string[] = [];
   if (roleDetection.has_product) present.push('product');
   if (roleDetection.has_engineer) present.push('engineer');
+  if (roleDetection.has_creative_review) present.push('creative_review');
   if (roleDetection.has_qa) present.push('qa');
   if (roleDetection.has_techlead) present.push('techlead');
 
-  const completeness = present.length / 4;
+  const completeness = present.length / 5;
   const missing = ROLE_ORDER.filter(r => !present.includes(r));
   for (const m of missing) {
     violations.push(`Missing role step: ${m}`);
@@ -53,9 +54,9 @@ export function trackFlow(
     const depth = section.content.length;
     stepDepths[section.role] = depth;
     if (depth >= MIN_SECTION_DEPTH) {
-      depthScore += 1 / 4;
+      depthScore += 1 / 5;
     } else if (depth > 0) {
-      depthScore += 0.3 / 4;
+      depthScore += 0.3 / 5;
       violations.push(`Shallow ${section.role} section: ${depth} chars (min ${MIN_SECTION_DEPTH})`);
     }
   }

@@ -21,6 +21,7 @@ export interface OrganizationAuditReport {
   capital_efficiency: number;
   execution_velocity: number;
   focus_score: number;
+  dora_score: number;
   company_layer: Record<string, any>;
   ceo_layer: Record<string, any>;
   project_layer: Array<Record<string, any>>;
@@ -34,17 +35,20 @@ export interface OrganizationAuditReport {
   rule_feedback_queue: Array<Record<string, any>>;
 }
 
-export function buildOrganizationAudit(projects: ProjectOrganizationInput[]): OrganizationAuditReport {
+export function buildOrganizationAudit(projects: ProjectOrganizationInput[], doraScore?: number): OrganizationAuditReport {
   const portfolioHealth = pct(avg(projects.map(project => project.management_report.overall_score)));
   const founderOperatingScore = scoreFounderOperating(projects);
   const capitalEfficiency = scoreCapitalEfficiency(projects);
   const executionVelocity = scoreExecutionVelocity(projects);
   const focusScore = scoreFocus(projects);
+  const dora = doraScore ?? 0;
   const companyScore = clamp(Math.round(
-    portfolioHealth * 0.30 +
-    founderOperatingScore * 0.25 +
-    executionVelocity * 0.25 +
-    capitalEfficiency * 0.20
+    portfolioHealth * 0.25 +
+    founderOperatingScore * 0.20 +
+    executionVelocity * 0.20 +
+    capitalEfficiency * 0.15 +
+    focusScore * 0.10 +
+    dora * 0.10
   ));
 
   const projectLayer = projects.map(project => buildProjectLayer(project));
@@ -68,6 +72,7 @@ export function buildOrganizationAudit(projects: ProjectOrganizationInput[]): Or
     capital_efficiency: capitalEfficiency,
     execution_velocity: executionVelocity,
     focus_score: focusScore,
+    dora_score: dora,
     company_layer: {
       structure: 'Start-up Company -> CEO/Founder -> Project Groups -> Project Roles -> Sidecar Audit -> Rule Feedback Flywheel',
       project_count: projects.length,
