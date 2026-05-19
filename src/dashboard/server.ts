@@ -329,6 +329,20 @@ app.get('/api/startup-audit', async (req, res) => {
   res.json(buildStartupAuditReport(db, projectPath));
 });
 
+// Execution review: one actionable project landing report for founder/PMO review.
+app.get('/api/execution-review', async (req, res) => {
+  const db = getDb();
+  const projectPath = req.query.project_path as string;
+
+  if (!projectPath) {
+    res.status(400).json({ error: 'project_path required' });
+    return;
+  }
+
+  await syncCodexForProject(db, projectPath, true);
+  res.json(buildExecutionReviewReport(db, projectPath));
+});
+
 // Proposed rule patches produced by Sidecar. Applying is explicit and append-only.
 app.get('/api/rule-feedback', async (req, res) => {
   const db = getDb();
@@ -468,6 +482,446 @@ function getSessionIdsForProject(db: ReturnType<typeof getDb>, projectPath: stri
     'SELECT session_id FROM sessions WHERE cwd = ? ORDER BY started_at DESC'
   ).all(projectPath) as Array<{ session_id: string }>;
   return rows.map(row => row.session_id);
+}
+
+function buildExecutionReviewReport(db: ReturnType<typeof getDb>, projectPath: string) {
+  const projectReport = buildProjectManagementReportForPath(db, projectPath);
+  const resourceReport = buildProjectResourceReport(db, projectPath);
+  const startupAudit = buildStartupAuditReport(db, projectPath) as any;
+  const roleBottlenecks = buildRoleNodeBottlenecks(db, projectPath, resourceReport);
+  const managementBottlenecks = buildManagementBottlenecks(projectReport, startupAudit);
+  const resourceBottlenecks = buildResourceBottlenecks(resourceReport);
+  const developmentEfficiency = buildDevelopmentEfficiency(projectReport, resourceReport);
+  const goalAttainment = buildGoalAttainment(projectReport, startupAudit);
+  const primaryBottleneck = pickPrimaryBottleneck([
+    ...managementBottlenecks,
+    ...roleBottlenecks.map(role => ({
+      area: `${role.role_label} 节点`,
+      score: role.score,
+      severity: role.severity,
+      evidence: role.bottleneck,
+      action: role.next_action,
+    })),
+    ...resourceBottlenecks.items,
+  ]);
+  const actionPlan = buildExecutionActionPlan({
+    primaryBottleneck,
+    managementBottlenecks,
+    roleBottlenecks,
+    resourceBottlenecks,
+    developmentEfficiency,
+    goalAttainment,
+    startupAudit,
+  });
+
+  return {
+    project_path: projectPath,
+    generated_at: Date.now(),
+    executive_summary: {
+      current_bottleneck: primaryBottleneck.area,
+      bottleneck_severity: primaryBottleneck.severity,
+      target_attainment_score: goalAttainment.score,
+      prompt_session_efficiency_score: developmentEfficiency.prompt_session_efficiency_score,
+      review_summary: summarizeExecutionReview(primaryBottleneck, goalAttainment, developmentEfficiency),
+    },
+    management_bottlenecks: managementBottlenecks,
+    role_node_bottlenecks: roleBottlenecks,
+    resource_bottlenecks: resourceBottlenecks,
+    development_efficiency: developmentEfficiency,
+    goal_attainment: goalAttainment,
+    retrospective: buildRetrospective(projectReport, startupAudit, resourceReport, primaryBottleneck),
+    action_plan: actionPlan,
+    startup_audit: startupAudit,
+  };
+}
+
+function buildManagementBottlenecks(projectReport: ProjectManagementReport, startupAudit: any) {
+  const startupScores = startupAudit?.dimension_scores || {};
+  const dimensions = [
+    {
+      area: 'CEO 输入 / 需求规格',
+      score: projectReport.input_quality_score || 0,
+      evidence: first(projectReport.top_risks, '目标、边界、验收标准或上下文不足会直接放大返工。'),
+      action: '下一轮先写 Founder Brief：目标用户、痛点、P0、不做范围、验收标准、成功指标。',
+    },
+    {
+      area: '项目过程 / 协作流',
+      score: projectReport.process_health_score || 0,
+      evidence: first(projectReport.top_risks, '角色参与、交接、轮次收敛或验证闭环存在过程风险。'),
+      action: '每个 episode 强制输出“上一步结论 -> 当前动作 -> 验收证据 -> 下一步”。',
+    },
+    {
+      area: '交付结果 / 验收闭环',
+      score: projectReport.output_quality_score || 0,
+      evidence: (projectReport.top_risks || []).find(risk => /交付|验证|闭环|go\/no-go/i.test(risk)) || '交付需要明确验证证据、结果摘要和 go/no-go 判断。',
+      action: '交付末尾固定包含 build/test/deploy 证据、剩余风险、go/no-go、下一步最小动作。',
+    },
+    {
+      area: '指标置信度 / 数据质量',
+      score: projectReport.confidence_score || 0,
+      evidence: first(projectReport.data_quality_flags, '当前样本量、耗时或重复记录会影响管理判断可信度。'),
+      action: '先修采集口径和异常样本，再用分数做趋势判断。',
+    },
+    {
+      area: '初创纪律 / MVP 聚焦',
+      score: normalizePercentScore(startupScores.startup_excellence),
+      evidence: first(startupAudit?.anti_patterns, '需要保持极致 MVP、用户验证和商业闭环约束。'),
+      action: '砍掉非 P0 范围，只推进一个能被用户或业务结果验证的小闭环。',
+    },
+  ];
+
+  return dimensions
+    .map(item => ({ ...item, severity: severityForScore(item.score) }))
+    .sort((a, b) => a.score - b.score);
+}
+
+function buildRoleNodeBottlenecks(db: ReturnType<typeof getDb>, projectPath: string, resourceReport: any) {
+  const sessionIds = getSessionIdsForProject(db, projectPath);
+  const roleOrder = ['product', 'engineer', 'qa', 'techlead'];
+  const roleLabels: Record<string, string> = {
+    product: 'Product',
+    engineer: 'Engineer',
+    qa: 'QA',
+    techlead: 'Tech Lead',
+  };
+  const nodeLabels: Record<string, string> = {
+    product: '需求定义 / 目标拆解',
+    engineer: '技术方案 / 实现收敛',
+    qa: '验证覆盖 / 风险暴露',
+    techlead: '决策收口 / Go-No-Go',
+  };
+  const resourceByRole = new Map<string, any>((resourceReport?.role_effort || []).map((role: any) => [role.role, role]));
+
+  if (sessionIds.length === 0) {
+    return roleOrder.map(role => ({
+      role,
+      role_label: roleLabels[role],
+      node: nodeLabels[role],
+      score: 0,
+      severity: 'critical',
+      evaluations: 0,
+      token_share: 0,
+      counted_tokens: 0,
+      deficiencies: ['暂无该项目会话样本'],
+      bottleneck: '还没有可分析的角色执行样本。',
+      next_action: '先用 Sidecar 跑一次完整项目执行会话，再评估角色节点瓶颈。',
+    }));
+  }
+
+  const placeholders = sessionIds.map(() => '?').join(',');
+  const rows = db.prepare(
+    `SELECT role, score, deficiencies
+     FROM role_evaluations
+     WHERE session_id IN (${placeholders})`
+  ).all(...sessionIds) as Array<{ role: string; score: number; deficiencies: string }>;
+  const byRole = new Map<string, Array<{ score: number; deficiencies: string[] }>>();
+
+  for (const row of rows) {
+    if (!byRole.has(row.role)) byRole.set(row.role, []);
+    byRole.get(row.role)!.push({
+      score: Number(row.score || 0),
+      deficiencies: safeJsonParse(row.deficiencies, []),
+    });
+  }
+
+  return roleOrder.map(role => {
+    const entries = byRole.get(role) || [];
+    const resource = resourceByRole.get(role) || {};
+    const score = entries.length ? ratio(entries.reduce((total, entry) => total + entry.score, 0), entries.length) : 0;
+    const deficiencies = topFrequent(entries.flatMap(entry => entry.deficiencies || []), 4);
+    const tokenShare = Number(resource.token_share || 0);
+    const bottleneck = deriveRoleBottleneck(role, score, tokenShare, deficiencies, entries.length);
+
+    return {
+      role,
+      role_label: roleLabels[role],
+      node: nodeLabels[role],
+      score,
+      severity: severityForScore(score),
+      evaluations: entries.length,
+      token_share: tokenShare,
+      counted_tokens: Number(resource.counted_tokens || 0),
+      tokens_per_score_point: Number(resource.tokens_per_score_point || 0),
+      deficiencies,
+      bottleneck,
+      next_action: roleNextAction(role, score, deficiencies),
+    };
+  }).sort((a, b) => {
+    const severityDiff = severityRank(b.severity) - severityRank(a.severity);
+    return severityDiff || a.score - b.score || b.token_share - a.token_share;
+  });
+}
+
+function buildResourceBottlenecks(resourceReport: any) {
+  const totals = resourceReport?.totals || {};
+  const countedTokens = Number(totals.counted_tokens || totals.estimated_tokens || 0);
+  const episodes = Number(totals.episodes || 0);
+  const turns = Number(totals.turns || 0);
+  const tools = Number(totals.tool_calls || 0);
+  const tokensPerEpisode = ratio(countedTokens, episodes || 1);
+  const turnsPerEpisode = ratio(turns, episodes || 1);
+  const toolCallsPerEpisode = ratio(tools, episodes || 1);
+  const biggestStage = (resourceReport?.lifecycle_stages || [])[0] || null;
+  const biggestRole = (resourceReport?.role_effort || [])[0] || null;
+  const topConversation = (resourceReport?.top_conversations || [])[0] || null;
+  const items: Array<Record<string, any>> = [];
+
+  if (Number(totals.sessions || 0) === 0) {
+    items.push({
+      area: '资源观测 / 数据采集',
+      score: 0,
+      severity: 'critical',
+      evidence: '当前项目没有 sessions，无法判断 token、轮次和阶段消耗。',
+      action: '先完成 setup/start，并让至少一次 Codex 或 Claude Code 会话进入该项目 cwd。',
+    });
+  }
+  if (biggestStage && Number(biggestStage.token_share || 0) >= 0.55) {
+    items.push({
+      area: `${biggestStage.stage} 阶段 token 集中`,
+      score: Math.max(0, 1 - Number(biggestStage.token_share || 0)),
+      severity: severityForScore(Math.max(0, 1 - Number(biggestStage.token_share || 0))),
+      evidence: `${biggestStage.stage} 消耗 ${Math.round(Number(biggestStage.token_share || 0) * 100)}% token，平均分 ${Math.round(Number(biggestStage.avg_score || 0) * 100)}%。`,
+      action: '把该阶段拆成更短的验收回合，先确认输入和退出条件，再允许继续消耗 token。',
+    });
+  }
+  if (biggestRole && Number(biggestRole.token_share || 0) >= 0.45 && Number(biggestRole.avg_score || 0) < 0.7) {
+    items.push({
+      area: `${biggestRole.role} 角色资源瓶颈`,
+      score: Number(biggestRole.avg_score || 0),
+      severity: severityForScore(Number(biggestRole.avg_score || 0)),
+      evidence: `${biggestRole.role} 消耗 ${Math.round(Number(biggestRole.token_share || 0) * 100)}% token，但评分只有 ${Math.round(Number(biggestRole.avg_score || 0) * 100)}%。`,
+      action: '给该角色增加输入模板和退出标准，避免高消耗低质量的开放式探索。',
+    });
+  }
+  if (topConversation && Number(topConversation.counted_tokens || 0) > tokensPerEpisode * 1.5 && Number(topConversation.score || 0) < 0.7) {
+    items.push({
+      area: '高 token 低产出会话',
+      score: Number(topConversation.score || 0),
+      severity: severityForScore(Number(topConversation.score || 0)),
+      evidence: `最高消耗 episode 使用 ${topConversation.counted_tokens} tokens，得分 ${Math.round(Number(topConversation.score || 0) * 100)}%。`,
+      action: '复盘该 episode 的 prompt、工具调用和验证缺口，把任务拆成更小闭环。',
+    });
+  }
+
+  return {
+    totals: {
+      counted_tokens: countedTokens,
+      actual_tokens: Number(totals.actual_tokens || 0),
+      estimated_tokens: Number(totals.estimated_tokens || 0),
+      tool_io_tokens: Number(totals.tool_io_tokens || 0),
+      sessions: Number(totals.sessions || 0),
+      episodes,
+      turns,
+      tool_calls: tools,
+      tokens_per_episode: tokensPerEpisode,
+      turns_per_episode: turnsPerEpisode,
+      tool_calls_per_episode: toolCallsPerEpisode,
+      actual_token_coverage: Number(totals.actual_token_coverage || 0),
+    },
+    biggest_stage: biggestStage,
+    biggest_role: biggestRole,
+    top_token_conversation: topConversation,
+    items: items.length ? items : [{
+      area: '资源消耗结构',
+      score: 0.8,
+      severity: 'low',
+      evidence: '当前没有明显单点资源瓶颈。',
+      action: '保持每轮只推进一个可验证目标，继续观察 token/episode 趋势。',
+    }],
+  };
+}
+
+function buildDevelopmentEfficiency(projectReport: ProjectManagementReport, resourceReport: any) {
+  const totals = resourceReport?.totals || {};
+  const episodes = Number(totals.episodes || 0);
+  const turns = Number(totals.turns || 0);
+  const tools = Number(totals.tool_calls || 0);
+  const turnsPerEpisode = ratio(turns, episodes || 1);
+  const toolCallsPerEpisode = ratio(tools, episodes || 1);
+  const promptSessionEfficiencyScore = roundNumber(
+    (projectReport.efficiency_score || 0) * 0.45 +
+    (projectReport.prompt_issue_score || 0) * 0.30 +
+    (projectReport.output_quality_score || 0) * 0.25
+  );
+  const bottlenecks: string[] = [];
+
+  if ((projectReport.prompt_issue_score || 0) < 0.65) bottlenecks.push('Prompt 输入质量不足，需求需要先产品化整理。');
+  if ((projectReport.efficiency_score || 0) < 0.65) bottlenecks.push('会话效率偏低，可能存在轮次发散、重复探索或验证不足。');
+  if (turnsPerEpisode > 5) bottlenecks.push(`平均每个 episode ${turnsPerEpisode} turns，沟通往返成本偏高。`);
+  if (toolCallsPerEpisode > 12) bottlenecks.push(`平均每个 episode ${toolCallsPerEpisode} 次工具调用，探索成本偏高。`);
+
+  return {
+    prompt_session_efficiency_score: promptSessionEfficiencyScore,
+    prompt_quality_score: projectReport.prompt_issue_score || 0,
+    execution_efficiency_score: projectReport.efficiency_score || 0,
+    output_quality_score: projectReport.output_quality_score || 0,
+    turns_per_episode: turnsPerEpisode,
+    tool_calls_per_episode: toolCallsPerEpisode,
+    bottlenecks,
+    next_action: bottlenecks.length
+      ? '下一轮把任务压缩成一个 P0 输出，并在 prompt 中写明验收命令、失败条件和停止条件。'
+      : '保持当前 prompt 和会话节奏，继续用 episode 级别趋势观察效率。',
+  };
+}
+
+function buildGoalAttainment(projectReport: ProjectManagementReport, startupAudit: any) {
+  const startupExcellence = normalizePercentScore(startupAudit?.dimension_scores?.startup_excellence);
+  const score = roundNumber(
+    (projectReport.output_quality_score || 0) * 0.40 +
+    (projectReport.confidence_score || 0) * 0.20 +
+    startupExcellence * 0.25 +
+    (projectReport.process_health_score || 0) * 0.15
+  );
+
+  return {
+    score,
+    status: score >= 0.75 ? 'on-track' : score >= 0.55 ? 'at-risk' : 'off-track',
+    evidence: [
+      `Output ${Math.round((projectReport.output_quality_score || 0) * 100)}%`,
+      `Process ${Math.round((projectReport.process_health_score || 0) * 100)}%`,
+      `Confidence ${Math.round((projectReport.confidence_score || 0) * 100)}%`,
+      `Startup Excellence ${Math.round(startupExcellence * 100)}%`,
+    ],
+    gap: score >= 0.75
+      ? '目标达成信号较稳定，下一步重点是沉淀规则和保持节奏。'
+      : '目标达成还不稳定，需要补强交付验证、范围控制和 CEO 输入规格。',
+    next_success_metric: '下一轮至少完成 1 个可验证 P0 交付，并留下 build/test/deploy 或用户验证证据。',
+  };
+}
+
+function buildRetrospective(projectReport: ProjectManagementReport, startupAudit: any, resourceReport: any, primaryBottleneck: any) {
+  return {
+    what_worked: [
+      ...((startupAudit?.highlights || []).slice(0, 3)),
+      (projectReport.output_quality_score || 0) >= 0.7 ? '交付质量达到可复用水平。' : '',
+    ].filter(Boolean),
+    what_did_not_work: [
+      primaryBottleneck.evidence,
+      ...((projectReport.top_risks || []).slice(0, 3)),
+      ...((startupAudit?.anti_patterns || []).slice(0, 2)),
+    ].filter(Boolean),
+    decision_log: [
+      `当前优先瓶颈：${primaryBottleneck.area}`,
+      `目标达成状态：${buildGoalAttainment(projectReport, startupAudit).status}`,
+      `资源口径：${resourceReport?.token_source || 'unknown'}`,
+    ],
+    next_review_questions: [
+      '这一轮的 P0 目标是否被真实验证，而不仅是完成代码？',
+      '哪个角色节点最拖慢收口，它需要模板、约束还是更小任务？',
+      '最高 token episode 是否产生了匹配的业务或交付价值？',
+      '本轮学到的规则是否已经写回项目 md 文件？',
+    ],
+  };
+}
+
+function buildExecutionActionPlan(input: {
+  primaryBottleneck: any;
+  managementBottlenecks: any[];
+  roleBottlenecks: any[];
+  resourceBottlenecks: any;
+  developmentEfficiency: any;
+  goalAttainment: any;
+  startupAudit: any;
+}) {
+  const weakestRole = input.roleBottlenecks[0];
+  const plan = [
+    {
+      priority: 'P0',
+      owner: 'CEO/Founder',
+      action: input.primaryBottleneck.action,
+      success_metric: '下一轮 Management Health 提升，且 current bottleneck 不再是同一项。',
+      cadence: 'next session',
+    },
+    {
+      priority: 'P0',
+      owner: weakestRole?.role_label || 'Tech Lead',
+      action: weakestRole?.next_action || '补齐最弱角色节点的输出模板和验收门禁。',
+      success_metric: `${weakestRole?.role_label || 'Role'} score >= 70%，且缺陷项减少。`,
+      cadence: 'next episode',
+    },
+    {
+      priority: 'P1',
+      owner: 'PMO/Sidecar',
+      action: input.developmentEfficiency.next_action,
+      success_metric: 'prompt/session efficiency >= 70%，turns per episode 不继续上升。',
+      cadence: 'daily review',
+    },
+    {
+      priority: 'P1',
+      owner: 'Tech Lead',
+      action: input.resourceBottlenecks.items[0]?.action || '复盘 token 消耗最高的 episode 并拆小任务。',
+      success_metric: '最高 token episode 的 score/token 比例改善，低产出高消耗会话减少。',
+      cadence: 'weekly review',
+    },
+    {
+      priority: 'P2',
+      owner: 'CEO/Founder',
+      action: input.goalAttainment.next_success_metric,
+      success_metric: '每周至少 1 个可验证项目结果进入复盘记录。',
+      cadence: 'weekly review',
+    },
+  ];
+
+  return plan;
+}
+
+function pickPrimaryBottleneck(items: any[]) {
+  const usable = items.filter(Boolean);
+  if (usable.length === 0) {
+    return {
+      area: '暂无瓶颈样本',
+      score: 0,
+      severity: 'critical',
+      evidence: '还没有足够项目数据。',
+      action: '先采集至少一次完整项目执行会话。',
+    };
+  }
+  return usable
+    .sort((a, b) => severityRank(b.severity) - severityRank(a.severity) || a.score - b.score)[0];
+}
+
+function summarizeExecutionReview(primaryBottleneck: any, goalAttainment: any, developmentEfficiency: any): string {
+  return `当前最需要处理的是 ${primaryBottleneck.area}；目标达成状态为 ${goalAttainment.status}，prompt/会话效率为 ${Math.round((developmentEfficiency.prompt_session_efficiency_score || 0) * 100)}%。下一轮应优先执行 P0 动作，而不是继续扩大范围。`;
+}
+
+function deriveRoleBottleneck(role: string, score: number, tokenShare: number, deficiencies: string[], evaluations: number): string {
+  if (evaluations === 0) return '没有该角色的执行样本，说明角色节点没有进入稳定工作流。';
+  if (tokenShare >= 0.45 && score < 0.7) return '资源占比较高但质量分不足，是高消耗低杠杆节点。';
+  if (deficiencies.length > 0) return deficiencies[0];
+  if (score < 0.7) return `${role} 节点输出不够稳定，需要强化模板和验收门禁。`;
+  return '当前没有明显角色节点瓶颈。';
+}
+
+function roleNextAction(role: string, score: number, deficiencies: string[]): string {
+  if (score >= 0.7 && deficiencies.length === 0) return '保持当前角色模板，下一轮只观察趋势。';
+  if (role === 'product') return 'Product 先输出 Engineering Task Spec：目标、场景、痛点、约束、验收、优先级。';
+  if (role === 'engineer') return 'Engineer 先给方案边界、改动文件、风险和最小实现路径，再动代码。';
+  if (role === 'qa') return 'QA 必须列出正常、异常、边界测试用例，并标注风险等级。';
+  if (role === 'techlead') return 'Tech Lead 必须给 go/no-go、剩余风险、验证证据和下一步最小动作。';
+  return '补齐该角色的输入模板、输出格式和退出条件。';
+}
+
+function severityForScore(score: number): string {
+  if (score < 0.4) return 'critical';
+  if (score < 0.6) return 'high';
+  if (score < 0.75) return 'medium';
+  return 'low';
+}
+
+function severityRank(severity: string): number {
+  if (severity === 'critical') return 4;
+  if (severity === 'high') return 3;
+  if (severity === 'medium') return 2;
+  return 1;
+}
+
+function normalizePercentScore(value: number): number {
+  if (!Number.isFinite(Number(value))) return 0;
+  return Number(value) > 1 ? roundNumber(Number(value) / 100) : roundNumber(Number(value));
+}
+
+function first(items: string[] | undefined, fallback: string): string {
+  return (items || []).find(Boolean) || fallback;
 }
 
 function buildProjectManagementReportForPath(db: ReturnType<typeof getDb>, projectPath: string): ProjectManagementReport {

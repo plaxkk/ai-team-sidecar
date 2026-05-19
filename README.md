@@ -258,8 +258,9 @@ Overview:
 
 Project PMO:
 
+- Execution Review — bottleneck, resource, efficiency, goal attainment, action plan
 - Project management health
-- Sidecar project audit
+- Sidecar startup audit
 - Lifecycle and resource cost
 - Agent mix and top token conversations
 
@@ -335,6 +336,7 @@ Useful API checks:
 /api/company-audit
 /api/project-management-report?project_path=<path>
 /api/project-resource-report?project_path=<path>
+/api/execution-review?project_path=<path>
 /api/startup-audit?project_path=<path>
 /api/rule-feedback?project_path=<path>
 ```
