@@ -3,7 +3,7 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
-import { getDataDir, getPipePath, loadConfig } from '../config.js';
+import { getDataDir, getPipePath, isProjectAllowed, loadConfig } from '../config.js';
 
 const CONFIG = loadConfig();
 const DATA_DIR = getDataDir(CONFIG);
@@ -85,7 +85,12 @@ async function main() {
 
             if (event === 'SessionStart') {
               currentSessionId = sessionId;
-              upsertSession.run(sessionId, ts, data?.cwd || '');
+              const cwd = data?.cwd || '';
+              // Filter: only record sessions from allowed project directories
+              if (cwd && !isProjectAllowed(cwd)) {
+                continue;
+              }
+              upsertSession.run(sessionId, ts, cwd);
               insertEvent.run(sessionId, event, ts, eventPayload(data));
             } else if (event === 'UserPromptSubmit') {
               currentTurnNumber++;

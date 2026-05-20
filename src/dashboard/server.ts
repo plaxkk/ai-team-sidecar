@@ -7,7 +7,7 @@ import { generateCeoReport, generateCeoReportFromDb } from '../analysis/ceo-repo
 import { buildProjectManagementReport, getLatestProjectManagementReport, ProjectManagementReport } from '../analysis/project-report.js';
 import { auditStartupProject } from '../analysis/startup-auditor.js';
 import { buildOrganizationAudit, ProjectOrganizationInput } from '../analysis/organization-auditor.js';
-import { loadConfig } from '../config.js';
+import { loadConfig, isProjectAllowed } from '../config.js';
 import { BRIEF_TEMPLATE, parseFounderBrief, validateFounderBrief } from '../analysis/founder-brief.js';
 import { generateWeeklyReview } from '../analysis/weekly-review.js';
 import { evaluateBusinessMetrics } from '../analysis/business-metrics.js';
@@ -655,7 +655,9 @@ function getProjectRows(db: ReturnType<typeof getDb>) {
     last_activity: number;
   }>;
 
-  return rows.map(row => {
+  return rows
+    .filter(row => isProjectAllowed(row.project_path))
+    .map(row => {
     const sessionIds = getSessionIdsForProject(db, row.project_path);
     const report = buildProjectManagementReportForSessionIds(db, row.project_path, sessionIds);
     const episodeCount = db.prepare(
