@@ -14,6 +14,7 @@
     "backfill": "node --loader ts-node/esm bin/backfill.ts",
     "backfill:claude": "node --loader ts-node/esm bin/backfill.ts",
     "sync:codex": "node --loader ts-node/esm bin/sync-codex.ts",
+    "checkpoint": "node --loader ts-node/esm bin/checkpoint.ts",
     "test": "vitest run"
   },
   "dependencies": {

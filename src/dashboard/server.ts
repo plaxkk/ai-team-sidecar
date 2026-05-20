@@ -12,6 +12,9 @@ import { BRIEF_TEMPLATE, parseFounderBrief, validateFounderBrief } from '../anal
 import { generateWeeklyReview } from '../analysis/weekly-review.js';
 import { evaluateBusinessMetrics } from '../analysis/business-metrics.js';
 import { parseGitDeploys } from '../collector/git-collector.js';
+import { createManualCheckpoint } from '../analysis/checkpoint-detector.js';
+import { generateChangelog, getChangelogEntries, exportChangelogMd } from '../analysis/changelog-generator.js';
+import { generateXiaohongshuPost, archivePost, getSocialPosts } from '../analysis/social-post-generator.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -507,6 +510,108 @@ app.post('/api/business-signals', (req, res) => {
   ).run(project_path, signal_type, signal_value, signal_unit || '', Date.now(), notes || '');
 
   res.json({ status: 'recorded', project_path, signal_type, signal_value });
+});
+
+// === Checkpoint + Changelog + Social Post APIs ===
+
+// GET /api/checkpoints — list checkpoints for a project
+app.get('/api/checkpoints', (req, res) => {
+  const db = getDb();
+  const projectPath = req.query.project_path as string;
+  if (!projectPath) {
+    res.status(400).json({ error: 'project_path required' });
+    return;
+  }
+  const rows = db.prepare(
+    'SELECT * FROM checkpoints WHERE project_path = ? ORDER BY created_at DESC'
+  ).all(projectPath);
+  res.json(rows);
+});
+
+// POST /api/checkpoints — manual checkpoint creation
+app.post('/api/checkpoints', (req, res) => {
+  const db = getDb();
+  const { project_path, label } = req.body;
+  if (!project_path || !label) {
+    res.status(400).json({ error: 'project_path and label required' });
+    return;
+  }
+  const id = createManualCheckpoint(db, project_path, label);
+  res.json({ id, project_path, label });
+});
+
+// GET /api/changelog — view changelog entries
+app.get('/api/changelog', (req, res) => {
+  const db = getDb();
+  const projectPath = req.query.project_path as string;
+  if (!projectPath) {
+    res.status(400).json({ error: 'project_path required' });
+    return;
+  }
+  const entries = getChangelogEntries(db, projectPath);
+  res.json(entries);
+});
+
+// POST /api/changelog/generate — generate changelog and export CHANGELOG.md
+app.post('/api/changelog/generate', (req, res) => {
+  const db = getDb();
+  const projectPath = req.query.project_path as string || req.body?.project_path;
+  if (!projectPath) {
+    res.status(400).json({ error: 'project_path required' });
+    return;
+  }
+  const count = generateChangelog(db, projectPath);
+  let filePath: string | null = null;
+  if (count > 0) {
+    filePath = exportChangelogMd(db, projectPath);
+  }
+  res.json({ entries_generated: count, file_path: filePath });
+});
+
+// GET /api/social-posts — list social posts
+app.get('/api/social-posts', (req, res) => {
+  const db = getDb();
+  const projectPath = req.query.project_path as string;
+  if (!projectPath) {
+    res.status(400).json({ error: 'project_path required' });
+    return;
+  }
+  const posts = getSocialPosts(db, projectPath);
+  res.json(posts);
+});
+
+// POST /api/social-post/generate — generate xiaohongshu post
+app.post('/api/social-post/generate', (req, res) => {
+  const db = getDb();
+  const projectPath = req.query.project_path as string || req.body?.project_path;
+  const entryIds = req.body?.changelog_entry_ids as number[] | undefined;
+  if (!projectPath) {
+    res.status(400).json({ error: 'project_path required' });
+    return;
+  }
+  const post = generateXiaohongshuPost(db, projectPath, entryIds);
+  if (!post) {
+    res.status(404).json({ error: 'No changelog entries found to generate post from' });
+    return;
+  }
+  res.json(post);
+});
+
+// POST /api/social-post/:id/archive — archive post to social-posts/ directory
+app.post('/api/social-post/:id/archive', (req, res) => {
+  const db = getDb();
+  const postId = Number(req.params.id);
+  const projectPath = req.query.project_path as string || req.body?.project_path;
+  if (!projectPath) {
+    res.status(400).json({ error: 'project_path required' });
+    return;
+  }
+  const filePath = archivePost(db, postId, projectPath);
+  if (!filePath) {
+    res.status(404).json({ error: 'Post not found' });
+    return;
+  }
+  res.json({ id: postId, file_path: filePath, status: 'archived' });
 });
 
 app.listen(PORT, () => {

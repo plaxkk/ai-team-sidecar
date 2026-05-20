@@ -192,6 +192,40 @@ function initSchema(db: Database.Database) {
       notes TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS checkpoints (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_path TEXT NOT NULL,
+      session_id TEXT,
+      episode_id INTEGER REFERENCES episodes(id),
+      checkpoint_type TEXT NOT NULL,
+      label TEXT,
+      files_changed TEXT,
+      tools_summary TEXT,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS changelog_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_path TEXT NOT NULL,
+      from_checkpoint_id INTEGER REFERENCES checkpoints(id),
+      to_checkpoint_id INTEGER REFERENCES checkpoints(id),
+      change_type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      files_summary TEXT,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS social_posts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_path TEXT NOT NULL,
+      post_type TEXT NOT NULL DEFAULT 'xiaohongshu',
+      content TEXT NOT NULL,
+      changelog_entry_ids TEXT,
+      status TEXT NOT NULL DEFAULT 'draft',
+      created_at INTEGER NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id);
     CREATE INDEX IF NOT EXISTS idx_events_type ON events(event_type);
     CREATE INDEX IF NOT EXISTS idx_turns_session ON turns(session_id);
@@ -203,6 +237,10 @@ function initSchema(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_weekly_reviews_project ON weekly_reviews(project_path, week_start);
     CREATE INDEX IF NOT EXISTS idx_deploy_events_project ON deploy_events(project_path, deploy_at);
     CREATE INDEX IF NOT EXISTS idx_business_signals_project ON business_signals(project_path, signal_type);
+    CREATE INDEX IF NOT EXISTS idx_checkpoints_project ON checkpoints(project_path, created_at);
+    CREATE INDEX IF NOT EXISTS idx_checkpoints_episode ON checkpoints(episode_id);
+    CREATE INDEX IF NOT EXISTS idx_changelog_project ON changelog_entries(project_path, created_at);
+    CREATE INDEX IF NOT EXISTS idx_social_posts_project ON social_posts(project_path, created_at);
   `);
 
   // Schema migrations for existing databases

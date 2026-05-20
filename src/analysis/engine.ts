@@ -11,6 +11,7 @@ import { evaluatePrompt } from './prompt-evaluator.js';
 import { evaluateDelivery } from './delivery-evaluator.js';
 import { generateCeoReport } from './ceo-report.js';
 import { buildProjectManagementReport, saveProjectManagementReport } from './project-report.js';
+import { detectAndCreateCheckpoints } from './checkpoint-detector.js';
 
 export async function runAnalysis(db: Database.Database, sessionId: string) {
   const turns = getTurnsForSession(db, sessionId);
@@ -210,6 +211,9 @@ export async function runAnalysis(db: Database.Database, sessionId: string) {
 
   const projectReport = buildProjectManagementReport(db, sessionId);
   saveProjectManagementReport(db, projectReport);
+
+  // 6. Checkpoint detection
+  detectAndCreateCheckpoints(db, sessionId);
 
   console.log(`[analysis] Analyzed session ${sessionId}: ${turns.length} turns, ${episodes.length} episodes`);
 }
