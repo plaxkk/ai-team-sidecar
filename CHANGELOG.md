@@ -3,6 +3,17 @@
 ## [最新]
 
 ### 2026-05-20
+- **refactor**: 项目路径配置通用化，支持自动探测 `projectsDir`
+  - 新增 `projectsDir` 配置字段：指定项目父目录即可自动过滤，无需逐个罗列项目路径
+  - `ensureConfig()` 首次 setup 自动探测常见目录（~/repos, ~/projects, ~/code, ~/dev, ~/src, ~/workspace）
+  - `isProjectAllowed()` 优先级：`projects` 显式列表 > `projectsDir` 父目录 > 全量接受
+  - 移除 README 和示例中所有 `~/repos` 硬编码引用
+
+- **fix**: Dashboard 和 Daemon 只显示/录入白名单目录下的项目会话
+  - Daemon `SessionStart` 事件增加 `isProjectAllowed()` 过滤
+  - Dashboard `getProjectRows()` 过滤掉不在白名单内的项目
+  - Sidecar 自身目录的会话不再出现在项目列表中
+
 - **feature**: Checkpoint + Changelog + Build in Public 自动记录闭环
   - 新增 `checkpoints` / `changelog_entries` / `social_posts` 三张 DB 表，用于结构化存储改动节点、变更说明和推文
   - 新增 `src/analysis/checkpoint-detector.ts`：分析引擎在 episode 结束时自动创建检查点（auto_episode / auto_session_end），支持手动创建（manual）
