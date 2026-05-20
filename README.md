@@ -114,12 +114,8 @@ Example:
 {
   "dataDir": "~/.ai-team-sidecar/data",
   "dashboardPort": 4041,
-  "projects": [
-    {
-      "name": "my-app",
-      "path": "~/repos/my-app"
-    }
-  ],
+  "projectsDir": "~/repos",
+  "projects": [],
   "agents": {
     "claudeCode": true,
     "codexCli": true
@@ -131,7 +127,12 @@ Example:
 }
 ```
 
-If `projects` is empty, Sidecar accepts all project `cwd` values it sees. Add project paths to restrict monitoring.
+**Project filtering** (priority from high to low):
+1. `projects` — explicit project list with fine-grained control
+2. `projectsDir` — parent directory; all subdirectories are treated as projects (auto-detected on first `npm run setup`)
+3. Neither set — accept all sessions
+
+During setup, Sidecar auto-detects your projects directory from common conventions (`~/repos`, `~/projects`, `~/code`, `~/dev`, `~/src`, `~/workspace`).
 
 You can also set:
 
@@ -225,7 +226,7 @@ npm run sync:codex
 Sync a single project:
 
 ```bash
-npm run sync:codex -- ~/repos/my-app
+npm run sync:codex -- ~/projects/my-app
 ```
 
 Codex token usage uses actual local token counters when available:

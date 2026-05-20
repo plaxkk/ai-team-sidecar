@@ -10,6 +10,9 @@ export interface SidecarProjectConfig {
 export interface SidecarConfig {
   dataDir: string;
   dashboardPort: number;
+  /** Parent directory containing all user projects. Auto-detect on first setup. */
+  projectsDir: string;
+  /** Explicit project list. When set, overrides projectsDir for fine-grained control. */
   projects: SidecarProjectConfig[];
   preset?: 'solo-founder';
   agents: {
@@ -28,6 +31,7 @@ export const DEFAULT_CONFIG_PATH = path.join(SIDECAR_HOME, 'config.json');
 const DEFAULT_CONFIG: SidecarConfig = {
   dataDir: path.join(SIDECAR_HOME, 'data'),
   dashboardPort: 4041,
+  projectsDir: '',
   projects: [],
   agents: {
     claudeCode: true,
@@ -60,9 +64,28 @@ export function ensureConfig(): { config: SidecarConfig; configPath: string; cre
     return { config: loadConfig(), configPath, created: false };
   }
 
-  const config = normalizeConfig(DEFAULT_CONFIG);
+  const config = normalizeConfig({
+    ...DEFAULT_CONFIG,
+    projectsDir: detectProjectsDir(),
+  });
   fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
   return { config, configPath, created: true };
+}
+
+/**
+ * Auto-detect the user's projects directory by checking common conventions.
+ * Returns the first existing directory, or empty string if none found.
+ */
+export function detectProjectsDir(): string {
+  const home = os.homedir();
+  const candidates = ['repos', 'projects', 'code', 'dev', 'src', 'workspace'];
+  for (const candidate of candidates) {
+    const fullPath = path.join(home, candidate);
+    if (fs.existsSync(fullPath) && fs.statSync(fullPath).isDirectory()) {
+      return fullPath;
+    }
+  }
+  return '';
 }
 
 export function getConfigPath(): string {
@@ -84,11 +107,23 @@ export function getHooksDir(config = loadConfig()): string {
 export function isProjectAllowed(cwd: string, config = loadConfig()): boolean {
   const normalizedCwd = normalizePath(cwd);
   if (!normalizedCwd) return false;
-  if (config.projects.length === 0) return true;
-  return config.projects.some(project => {
-    const projectPath = normalizePath(project.path);
-    return normalizedCwd === projectPath || normalizedCwd.startsWith(`${projectPath}${path.sep}`);
-  });
+
+  // Explicit projects list takes priority
+  if (config.projects.length > 0) {
+    return config.projects.some(project => {
+      const projectPath = normalizePath(project.path);
+      return normalizedCwd === projectPath || normalizedCwd.startsWith(`${projectPath}${path.sep}`);
+    });
+  }
+
+  // Use projectsDir as a parent directory filter
+  if (config.projectsDir) {
+    const dir = normalizePath(config.projectsDir);
+    return normalizedCwd === dir || normalizedCwd.startsWith(`${dir}${path.sep}`);
+  }
+
+  // No filter configured — accept all
+  return true;
 }
 
 export function expandHome(value: string): string {
@@ -108,6 +143,7 @@ function normalizeConfig(config: SidecarConfig): SidecarConfig {
     ...config,
     dataDir: expandHome(config.dataDir),
     dashboardPort: Number(config.dashboardPort || DEFAULT_CONFIG.dashboardPort),
+    projectsDir: config.projectsDir ? expandHome(config.projectsDir) : '',
     projects: (config.projects || [])
       .filter(project => project && project.path)
       .map(project => ({

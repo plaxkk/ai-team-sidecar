@@ -3,6 +3,9 @@
 本文档定义了 AI 助手在处理用户请求时必须遵循的虚拟团队角色规范。
 每个请求都必须经过 Product → Engineer → QA → Tech Lead 四个角色的完整流程。
 
+公司级产品迭代、工具链、任务认领、PR、CI/CD、上线和反馈流程见：
+[docs/STARTUP-ITERATION-WORKFLOW.md](docs/STARTUP-ITERATION-WORKFLOW.md)
+
 ---
 
 ## Product 角色规范
