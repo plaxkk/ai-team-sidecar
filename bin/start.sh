@@ -29,7 +29,7 @@ DASH_PID=$!
 echo "  Dashboard PID: $DASH_PID"
 
 echo ""
-echo "AI Team Sidecar is running."
+echo "AiTeam is running."
 echo "  Daemon:   PID $DAEMON_PID"
 echo "  Dashboard: PID $DASH_PID  ->  $DASHBOARD_URL"
 echo ""
