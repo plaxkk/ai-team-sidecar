@@ -1,6 +1,22 @@
 {
   "name": "ai-team-sidecar",
   "version": "0.1.0",
+  "description": "Sustainable workflow flywheel for independent developers running an OPC-style AI company",
+  "license": "MIT",
+  "author": "AI Team Sidecar contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/plaxkk/ai-team-sidecar.git"
+  },
+  "keywords": [
+    "ai",
+    "claude-code",
+    "codex",
+    "developer-tools",
+    "workflow",
+    "project-management",
+    "dashboard"
+  ],
   "private": false,
   "type": "module",
   "scripts": {

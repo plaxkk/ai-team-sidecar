@@ -1,12 +1,12 @@
-# AI Team Sidecar
+# AiTeam
 
 Sustainable workflow flywheel for independent developers running an OPC-style AI company.
 
-AI Team Sidecar is not just a dashboard. It is built for solo founders and independent developers who operate a personal OPC company with AI agents as the virtual team. It helps you manage local repo projects, improve project rules, audit execution quality, and continuously sharpen the responsibilities of virtual company roles such as Product, RD/Engineer, QA, and Tech Lead.
+AiTeam (formerly AI Team Sidecar) is not just a dashboard. It is built for solo founders and independent developers who operate a personal OPC company with AI agents as the virtual team. It helps you manage local repo projects, improve project rules, audit execution quality, and continuously sharpen the responsibilities of virtual company roles such as Product, RD/Engineer, QA, and Tech Lead.
 
-The product is designed for virtual startups: one human founder stays accountable for direction and judgment, while AI agents execute work and Sidecar turns their conversation trail into a compounding operating system.
+The product is designed for virtual startups: one human founder stays accountable for direction and judgment, while AI agents execute work and AiTeam turns their conversation trail into a compounding operating system.
 
-AI Team Sidecar watches conversations from tools like Claude Code and Codex CLI, groups them by local repository, and evaluates execution quality as a lightweight startup management layer:
+AiTeam watches conversations from tools like Claude Code and Codex CLI, groups them by local repository, and evaluates execution quality as a lightweight startup management layer:
 
 ```text
 Founder / CEO
