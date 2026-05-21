@@ -1,5 +1,7 @@
 # AiTeam
 
+[![CI](https://github.com/plaxkk/ai-team-sidecar/actions/workflows/ci.yml/badge.svg)](https://github.com/plaxkk/ai-team-sidecar/actions/workflows/ci.yml)
+
 Sustainable workflow flywheel for independent developers running an OPC-style AI company.
 
 AiTeam (formerly AI Team Sidecar) is not just a dashboard. It is built for solo founders and independent developers who operate a personal OPC company with AI agents as the virtual team. It helps you manage local repo projects, improve project rules, audit execution quality, and continuously sharpen the responsibilities of virtual company roles such as Product, RD/Engineer, QA, and Tech Lead.
