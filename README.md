@@ -51,17 +51,13 @@ Everything runs locally by default. Conversation data is stored in your local SQ
 ## Quick Start
 
 ```bash
-npm run start
+git clone https://github.com/plaxkk/ai-team-sidecar.git && cd ai-team-sidecar && npm install && npm run start
 ```
 
-Open:
-
-```text
-http://localhost:4041
-```
+Dashboard opens at `http://localhost:4041`.
 
 <p align="center">
-  <img src="./docs/assets/dashboard.jpg" alt="AI Team Sidecar Dashboard" width="860">
+  <img src="./docs/assets/dashboard.jpg" alt="AiTeam Dashboard" width="860">
 </p>
 
 That is enough for Codex CLI data: the dashboard reads local Codex sessions from the default Codex state path when available and groups them by repository `cwd`.
