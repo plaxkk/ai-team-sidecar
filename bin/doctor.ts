@@ -44,7 +44,7 @@ checks.push({
   status: config.projects.length > 0 ? 'pass' : 'warn',
   message: config.projects.length > 0
     ? `Monitoring ${config.projects.length} configured project(s).`
-    : 'No project filter configured. Sidecar will accept every cwd it sees.',
+    : 'No project filter configured. AiTeam will accept every cwd it sees.',
 });
 
 const tracked = trackedFiles();
@@ -99,7 +99,7 @@ function isSensitiveTrackedFile(file: string): boolean {
   return /(^|\/)(data|local|private|transcripts)\//.test(file)
     || /\.(db|db-wal|db-shm|sqlite|sqlite3|jsonl)$/i.test(file)
     || /^\.env(\.|$)/.test(file)
-    || /(^|\/)(\.claude|\.codex|\.ai-team-sidecar)\//.test(file);
+    || /(^|\/)(\.claude|\.codex|\.aiteam)\//.test(file);
 }
 
 function personalPathHitsInFile(file: string): string[] {
@@ -120,7 +120,7 @@ function personalPathHitsInFile(file: string): string[] {
 }
 
 function findLocalDataFiles(root: string): string[] {
-  const candidates = ['data', 'dist/data', '.ai-team-sidecar', 'local', 'private', 'transcripts'];
+  const candidates = ['data', 'dist/data', '.aiteam', 'local', 'private', 'transcripts'];
   const results: string[] = [];
 
   for (const candidate of candidates) {

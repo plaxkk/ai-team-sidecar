@@ -33,7 +33,7 @@ try {
   fs.writeSync(fd, `${JSON.stringify(envelope)}\n`);
   fs.closeSync(fd);
 } catch {
-  // Never block or fail the host agent if the Sidecar daemon is not running.
+  // Never block or fail the host agent if the AiTeam daemon is not running.
   process.exit(0);
 }
 

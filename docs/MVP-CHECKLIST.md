@@ -6,4 +6,4 @@
 
 ---
 
-*本文档由 Sidecar Rule Feedback 自动生成，可根据项目实际情况调整。*
+*本文档由 AiTeam Rule Feedback 自动生成，可根据项目实际情况调整。*

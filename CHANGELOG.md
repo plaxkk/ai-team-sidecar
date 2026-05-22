@@ -12,7 +12,7 @@
 - **fix**: Dashboard 和 Daemon 只显示/录入白名单目录下的项目会话
   - Daemon `SessionStart` 事件增加 `isProjectAllowed()` 过滤
   - Dashboard `getProjectRows()` 过滤掉不在白名单内的项目
-  - Sidecar 自身目录的会话不再出现在项目列表中
+  - AiTeam 自身目录的会话不再出现在项目列表中
 
 - **feature**: Checkpoint + Changelog + Build in Public 自动记录闭环
   - 新增 `checkpoints` / `changelog_entries` / `social_posts` 三张 DB 表，用于结构化存储改动节点、变更说明和推文

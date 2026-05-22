@@ -211,7 +211,7 @@ Slock 任务状态：
 - 等方向评审确认产品定位后再进入功能开发。
 - 工程任务必须同时考虑可开源、可运行、可演示。
 
-### virtualTeam / AI Team Sidecar
+### AiTeam
 
 优先事项：
 

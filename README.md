@@ -1,10 +1,10 @@
 # AiTeam
 
-[![CI](https://github.com/plaxkk/ai-team-sidecar/actions/workflows/ci.yml/badge.svg)](https://github.com/plaxkk/ai-team-sidecar/actions/workflows/ci.yml)
+[![CI](https://github.com/plaxkk/AiTeam/actions/workflows/ci.yml/badge.svg)](https://github.com/plaxkk/AiTeam/actions/workflows/ci.yml)
 
 Sustainable workflow flywheel for independent developers running an OPC-style AI company.
 
-AiTeam (formerly AI Team Sidecar) is not just a dashboard. It is built for solo founders and independent developers who operate a personal OPC company with AI agents as the virtual team. It helps you manage local repo projects, improve project rules, audit execution quality, and continuously sharpen the responsibilities of virtual company roles such as Product, RD/Engineer, QA, and Tech Lead.
+AiTeam is not just a dashboard. It is built for solo founders and independent developers who operate a personal OPC company with AI agents as the virtual team. It helps you manage local repo projects, improve project rules, audit execution quality, and continuously sharpen the responsibilities of virtual company roles such as Product, RD/Engineer, QA, and Tech Lead.
 
 The product is designed for virtual startups: one human founder stays accountable for direction and judgment, while AI agents execute work and AiTeam turns their conversation trail into a compounding operating system.
 
@@ -33,7 +33,7 @@ Founder / CEO
 |           +-- Output quality
 |           +-- Delivery confidence
 |
-+-- AI Team Sidecar
++-- AiTeam
     |
     +-- Collector -> Local SQLite -> Analysis Engine -> Dashboard
     +-- Audit Findings -> Rule Feedback -> Project .md files -> Next execution loop
@@ -44,14 +44,14 @@ Founder / CEO
 - Product / RD / QA / Tech Lead role quality
 - Prompt and delivery quality with explainability
 - Token, tool, and lifecycle cost
-- Sidecar audit findings and rule feedback for project `.md` files
+- AiTeam audit findings and rule feedback for project `.md` files
 
 Everything runs locally by default. Conversation data is stored in your local SQLite database and is not uploaded.
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/plaxkk/ai-team-sidecar.git && cd ai-team-sidecar && npm install && npm run start
+git clone https://github.com/plaxkk/AiTeam.git && cd AiTeam && npm install && npm run start
 ```
 
 Dashboard opens at `http://localhost:4041`.
@@ -76,22 +76,22 @@ Optional checks:
 npm run doctor
 ```
 
-You only need to edit `~/.ai-team-sidecar/config.json` if you want to restrict monitoring to specific repositories. With the default empty `projects` list, Sidecar accepts every project `cwd` it sees.
+You only need to edit `~/.aiteam/config.json` if you want to restrict monitoring to specific repositories. With the default empty `projects` list, AiTeam accepts every project `cwd` it sees.
 
 ## Operating Flywheel
 
-The Sidecar flywheel is shown as a circular operating loop, but the dependency model is a per-iteration DAG plus a cross-iteration feedback loop. Inside one execution loop, the dependencies move forward. The cycle comes from improved rules becoming part of the next loop's operating context.
+The AiTeam flywheel is shown as a circular operating loop, but the dependency model is a per-iteration DAG plus a cross-iteration feedback loop. Inside one execution loop, the dependencies move forward. The cycle comes from improved rules becoming part of the next loop's operating context.
 
 <p align="center">
   <img src="./docs/assets/opc-ai-company-flywheel.jpg" alt="OPC AI Company Flywheel" width="860">
 </p>
 
-This means `Founder Intent` depends on the current project rules, and `Rules Improve` affects the next iteration, not an earlier step in the same iteration. The flywheel works because every AI work session creates management data. Instead of only asking whether the code changed, Sidecar asks whether the company is operating better: Are inputs sharper? Is scope controlled? Are Product, RD/Engineer, QA, and Tech Lead behaviors showing up? Is delivery backed by evidence? Are tokens buying useful progress?
+This means `Founder Intent` depends on the current project rules, and `Rules Improve` affects the next iteration, not an earlier step in the same iteration. The flywheel works because every AI work session creates management data. Instead of only asking whether the code changed, AiTeam asks whether the company is operating better: Are inputs sharper? Is scope controlled? Are Product, RD/Engineer, QA, and Tech Lead behaviors showing up? Is delivery backed by evidence? Are tokens buying useful progress?
 
 Use it as a weekly or daily operating cadence:
 
 - Start work from a concrete founder brief: goal, user, pain, P0 scope, constraints, and go/no-go criteria.
-- Let agents execute inside the repo while Sidecar runs in the background.
+- Let agents execute inside the repo while AiTeam runs in the background.
 - Review the dashboard by project, not by chat transcript: PMO score, risks, role quality, confidence, and cost.
 - Accept only rule feedback that would make the next execution loop clearer or stricter.
 - Push accepted lessons back into project `.md` files so the AI team becomes easier to manage over time.
@@ -103,14 +103,14 @@ The goal is not to automate the CEO away. The goal is to make one founder behave
 Default config path:
 
 ```text
-~/.ai-team-sidecar/config.json
+~/.aiteam/config.json
 ```
 
 Example:
 
 ```json
 {
-  "dataDir": "~/.ai-team-sidecar/data",
+  "dataDir": "~/.aiteam/data",
   "dashboardPort": 4041,
   "projectsDir": "~/repos",
   "projects": [],
@@ -130,12 +130,12 @@ Example:
 2. `projectsDir` — parent directory; all subdirectories are treated as projects (auto-detected on first `npm run setup`)
 3. Neither set — accept all sessions
 
-During setup, Sidecar auto-detects your projects directory from common conventions (`~/repos`, `~/projects`, `~/code`, `~/dev`, `~/src`, `~/workspace`).
+During setup, AiTeam auto-detects your projects directory from common conventions (`~/repos`, `~/projects`, `~/code`, `~/dev`, `~/src`, `~/workspace`).
 
 You can also set:
 
 ```bash
-SIDECAR_CONFIG=/path/to/config.json
+AITEAM_CONFIG=/path/to/config.json
 DATA_DIR=/path/to/data
 PORT=4041
 ```
@@ -147,13 +147,13 @@ Data is local-first. The repository should contain source code only; runtime dat
 Default data directory:
 
 ```text
-~/.ai-team-sidecar/data
+~/.aiteam/data
 ```
 
 Main database:
 
 ```text
-~/.ai-team-sidecar/data/feedback.db
+~/.aiteam/data/feedback.db
 ```
 
 Core tables:
@@ -165,7 +165,7 @@ Core tables:
 - `episodes`: task-level slices built from turns.
 - `role_evaluations`: Product / Engineer / QA / Tech Lead scores.
 - `ceo_reports`, `project_reports`, `company_audit_reports`, `project_audit_reports`: derived reports.
-- `rule_feedback_items`: Sidecar recommendations for project rules.
+- `rule_feedback_items`: AiTeam recommendations for project rules.
 
 ## Claude Code
 
@@ -183,8 +183,8 @@ Runtime flow:
 
 ```text
 Claude Code hook event
-  -> sidecar-hook
-  -> ~/.ai-team-sidecar/data/feedback-pipe
+  -> aiteam-hook
+  -> ~/.aiteam/data/feedback-pipe
   -> collector daemon
   -> SQLite
   -> analysis engine
@@ -198,7 +198,7 @@ Supported Claude events:
 - `PostToolUse`
 - `Stop`
 
-Claude token usage is estimated because Claude Code hooks do not consistently expose billable model token usage. Sidecar estimates:
+Claude token usage is estimated because Claude Code hooks do not consistently expose billable model token usage. AiTeam estimates:
 
 ```text
 ceil((visible text chars + tool input/output chars) / 4)
@@ -263,7 +263,7 @@ Project PMO:
 
 - Execution Review — bottleneck, resource, efficiency, goal attainment, action plan
 - Project management health
-- Sidecar startup audit
+- AiTeam startup audit
 - Lifecycle and resource cost
 - Agent mix and top token conversations
 
@@ -276,7 +276,7 @@ Diagnostics:
 
 ## Rule Feedback
 
-Sidecar can propose changes to project rules such as:
+AiTeam can propose changes to project rules such as:
 
 - `CLAUDE.md`
 - `项目规则.md`
@@ -289,7 +289,7 @@ By default it only proposes patches. Applying patches is explicit through the lo
 POST /api/rule-feedback/apply
 ```
 
-Applied patches are appended to the target file. Sidecar does not silently overwrite user rules.
+Applied patches are appended to the target file. AiTeam does not silently overwrite user rules.
 
 ## Privacy Notes
 
@@ -315,9 +315,9 @@ git status --short
 
 Open-source safety checklist:
 
-- Keep `~/.ai-team-sidecar/data` or any custom `DATA_DIR` out of the repository.
+- Keep `~/.aiteam/data` or any custom `DATA_DIR` out of the repository.
 - Keep `.env`, SQLite files, JSONL transcripts, Claude exports, and Codex exports untracked.
-- Prefer configuring `projects` so Sidecar only observes intended repositories.
+- Prefer configuring `projects` so AiTeam only observes intended repositories.
 - Enable `privacy.storeRawPayload` or `privacy.storeToolOutput` only when you explicitly need deeper local diagnostics.
 
 Disabling tool output storage reduces token visibility and diagnostic accuracy.

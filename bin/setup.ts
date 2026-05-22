@@ -76,7 +76,7 @@ if (preset === 'solo-founder') {
     dashboard_url: `http://localhost:${config.dashboardPort}`,
     next_steps: [
       'Run npm run start to launch collector and dashboard.',
-      `Sidecar will monitor projects under: ${config.projectsDir || '(all directories — set projectsDir to restrict)'}`,
+      `AiTeam will monitor projects under: ${config.projectsDir || '(all directories — set projectsDir to restrict)'}`,
       'Optional: run npm run install:claude-hooks if you want Claude Code collection.',
       'Optional: run npm run setup -- --preset solo-founder to generate a project template.',
       'Optional: edit config projects only if you want to restrict monitored repositories.',

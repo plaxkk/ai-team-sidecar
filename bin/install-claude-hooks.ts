@@ -19,7 +19,7 @@ for (const [fileName, eventName] of Object.entries(hookMap)) {
   const script = `#!/usr/bin/env bash
 set -euo pipefail
 ROOT="${repoRoot}"
-node --loader ts-node/esm "$ROOT/bin/sidecar-hook.ts" "${eventName}"
+node --loader ts-node/esm "$ROOT/bin/aiteam-hook.ts" "${eventName}"
 `;
   fs.writeFileSync(filePath, script, { mode: 0o755 });
   fs.chmodSync(filePath, 0o755);

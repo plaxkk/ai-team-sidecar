@@ -20,12 +20,12 @@ The dashboard opens at `http://localhost:4041`.
 Build and run with Docker:
 
 ```bash
-docker build -t ai-team-sidecar .
+docker build -t aiteam .
 
 docker run -d \
   -p 4041:8080 \
-  -v ai-team-sidecar-data:/app/data \
-  ai-team-sidecar
+  -v aiteam-data:/app/data \
+  aiteam
 ```
 
 Environment variables inside the container:
@@ -51,8 +51,8 @@ The default config:
 
 | Variable | Default | Description |
 |---|---|---|
-| `SIDECAR_CONFIG` | `~/.ai-team-sidecar/config.json` | Path to config file |
-| `DATA_DIR` | `~/.ai-team-sidecar/data` | SQLite DB and runtime data |
+| `AITEAM_CONFIG` | `~/.aiteam/config.json` | Path to config file |
+| `DATA_DIR` | `~/.aiteam/data` | SQLite DB and runtime data |
 | `PORT` | `4041` | Dashboard server port |
 
 See `.env.example` for a template.
