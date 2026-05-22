@@ -1,5 +1,5 @@
 {
-  "dataDir": "~/.ai-team-sidecar/data",
+  "dataDir": "~/.aiteam/data",
   "dashboardPort": 4041,
   "projects": [],
   "agents": {

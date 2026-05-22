@@ -10,7 +10,7 @@ dist
 *.sqlite
 *.sqlite3
 *.jsonl
-.ai-team-sidecar
+.aiteam
 .claude
 .codex
 local

@@ -1,4 +1,4 @@
-# AI Team Sidecar — CLAUDE.md
+# AiTeam — CLAUDE.md
 
 本文档定义了 AI 助手在处理用户请求时必须遵循的虚拟团队角色规范。
 每个请求都必须经过 Product → Engineer → QA → Tech Lead 四个角色的完整流程。

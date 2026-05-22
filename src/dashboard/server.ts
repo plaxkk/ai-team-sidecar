@@ -322,7 +322,7 @@ app.get('/api/project-resource-report', async (req, res) => {
   res.json(buildProjectResourceReport(db, projectPath));
 });
 
-// Sidecar startup audit: project rules + conversation transcript -> strict JSON feedback.
+// AiTeam startup audit: project rules + conversation transcript -> strict JSON feedback.
 app.get('/api/startup-audit', async (req, res) => {
   const db = getDb();
   const projectPath = req.query.project_path as string;
@@ -350,7 +350,7 @@ app.get('/api/execution-review', async (req, res) => {
   res.json(buildExecutionReviewReport(db, projectPath));
 });
 
-// Proposed rule patches produced by Sidecar. Applying is explicit and append-only.
+// Proposed rule patches produced by AiTeam. Applying is explicit and append-only.
 app.get('/api/rule-feedback', async (req, res) => {
   const db = getDb();
   const projectPath = req.query.project_path as string;
@@ -392,7 +392,7 @@ app.post('/api/rule-feedback/apply', (req, res) => {
     return;
   }
 
-  const block = `\n\n## Sidecar Rule Feedback - ${new Date().toISOString()}\n\n${suggestedPatch}\n`;
+  const block = `\n\n## AiTeam Rule Feedback - ${new Date().toISOString()}\n\n${suggestedPatch}\n`;
   fs.appendFileSync(targetPath, block, 'utf8');
   res.json({ status: 'applied', target_file: targetFile, bytes_appended: Buffer.byteLength(block) });
 });
@@ -830,7 +830,7 @@ function buildRoleNodeBottlenecks(db: ReturnType<typeof getDb>, projectPath: str
       counted_tokens: 0,
       deficiencies: ['暂无该项目会话样本'],
       bottleneck: '还没有可分析的角色执行样本。',
-      next_action: '先用 Sidecar 跑一次完整项目执行会话，再评估角色节点瓶颈。',
+      next_action: '先用 AiTeam 跑一次完整项目执行会话，再评估角色节点瓶颈。',
     }));
   }
 
@@ -1067,7 +1067,7 @@ function buildExecutionActionPlan(input: {
     },
     {
       priority: 'P1',
-      owner: 'PMO/Sidecar',
+      owner: 'PMO/AiTeam',
       action: input.developmentEfficiency.next_action,
       success_metric: 'prompt/session efficiency >= 70%，turns per episode 不继续上升。',
       cadence: 'daily review',
@@ -1442,7 +1442,7 @@ function deriveProjectRootCauses(audit: ReturnType<typeof auditStartupProject>, 
   if ((projectReport.input_quality_score || 0) < 0.6) causes.push('CEO/Product 输入规格不足，目标、边界或验收标准没有形成强门禁。');
   if (audit.dimension_scores.startup_excellence < 70) causes.push('MVP 和商业闭环约束不够硬，执行容易滑向泛化优化或过度设计。');
   if ((projectReport.output_quality_score || 0) < 0.6) causes.push('交付缺少足够验证证据和 go/no-go 收口。');
-  if (causes.length === 0) causes.push('当前主要矛盾是把 Sidecar 发现持续写回项目规则，而不是单轮执行质量。');
+  if (causes.length === 0) causes.push('当前主要矛盾是把 AiTeam 发现持续写回项目规则，而不是单轮执行质量。');
   return causes;
 }
 

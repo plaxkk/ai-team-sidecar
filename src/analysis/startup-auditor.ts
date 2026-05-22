@@ -228,7 +228,7 @@ function deriveRuleFeedback(input: {
   }
   return {
     current_weakness: '当前规则具备基本流程约束，但缺少持续审计后的量化阈值。',
-    suggested_md_patch: "在《项目规则.md》末尾增加：'每轮交付后 Sidecar 必须输出 rule_compliance、dialogue_quality、startup_excellence 三项评分；任一低于 70 分时，下一轮必须先修复对应流程问题再继续开发。'",
+    suggested_md_patch: "在《项目规则.md》末尾增加：'每轮交付后 AiTeam 必须输出 rule_compliance、dialogue_quality、startup_excellence 三项评分；任一低于 70 分时，下一轮必须先修复对应流程问题再继续开发。'",
   };
 }
 

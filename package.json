@@ -1,12 +1,12 @@
 {
-  "name": "ai-team-sidecar",
+  "name": "aiteam",
   "version": "0.1.0",
   "description": "Sustainable workflow flywheel for independent developers running an OPC-style AI company",
   "license": "MIT",
   "author": "AiTeam contributors",
   "repository": {
     "type": "git",
-    "url": "https://github.com/plaxkk/ai-team-sidecar.git"
+    "url": "https://github.com/plaxkk/AiTeam.git"
   },
   "keywords": [
     "ai",

@@ -1,4 +1,4 @@
-app = 'ai-team-sidecar'
+app = 'aiteam'
 primary_region = 'hkg'
 
 [build]

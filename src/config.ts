@@ -2,18 +2,18 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-export interface SidecarProjectConfig {
+export interface AiTeamProjectConfig {
   name?: string;
   path: string;
 }
 
-export interface SidecarConfig {
+export interface AiTeamConfig {
   dataDir: string;
   dashboardPort: number;
   /** Parent directory containing all user projects. Auto-detect on first setup. */
   projectsDir: string;
   /** Explicit project list. When set, overrides projectsDir for fine-grained control. */
-  projects: SidecarProjectConfig[];
+  projects: AiTeamProjectConfig[];
   preset?: 'solo-founder';
   agents: {
     claudeCode: boolean;
@@ -25,11 +25,11 @@ export interface SidecarConfig {
   };
 }
 
-export const SIDECAR_HOME = path.join(os.homedir(), '.ai-team-sidecar');
-export const DEFAULT_CONFIG_PATH = path.join(SIDECAR_HOME, 'config.json');
+export const AITEAM_HOME = path.join(os.homedir(), '.aiteam');
+export const DEFAULT_CONFIG_PATH = path.join(AITEAM_HOME, 'config.json');
 
-const DEFAULT_CONFIG: SidecarConfig = {
-  dataDir: path.join(SIDECAR_HOME, 'data'),
+const DEFAULT_CONFIG: AiTeamConfig = {
+  dataDir: path.join(AITEAM_HOME, 'data'),
   dashboardPort: 4041,
   projectsDir: '',
   projects: [],
@@ -43,11 +43,11 @@ const DEFAULT_CONFIG: SidecarConfig = {
   },
 };
 
-export function loadConfig(): SidecarConfig {
+export function loadConfig(): AiTeamConfig {
   const configPath = getConfigPath();
   if (!fs.existsSync(configPath)) return DEFAULT_CONFIG;
 
-  const raw = JSON.parse(fs.readFileSync(configPath, 'utf8')) as Partial<SidecarConfig>;
+  const raw = JSON.parse(fs.readFileSync(configPath, 'utf8')) as Partial<AiTeamConfig>;
   return normalizeConfig({
     ...DEFAULT_CONFIG,
     ...raw,
@@ -56,7 +56,7 @@ export function loadConfig(): SidecarConfig {
   });
 }
 
-export function ensureConfig(): { config: SidecarConfig; configPath: string; created: boolean } {
+export function ensureConfig(): { config: AiTeamConfig; configPath: string; created: boolean } {
   const configPath = getConfigPath();
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
 
@@ -89,7 +89,7 @@ export function detectProjectsDir(): string {
 }
 
 export function getConfigPath(): string {
-  return expandHome(process.env.SIDECAR_CONFIG || DEFAULT_CONFIG_PATH);
+  return expandHome(process.env.AITEAM_CONFIG || DEFAULT_CONFIG_PATH);
 }
 
 export function getDataDir(config = loadConfig()): string {
@@ -138,7 +138,7 @@ export function normalizePath(value: string): string {
   return path.resolve(expandHome(value));
 }
 
-function normalizeConfig(config: SidecarConfig): SidecarConfig {
+function normalizeConfig(config: AiTeamConfig): AiTeamConfig {
   return {
     ...config,
     dataDir: expandHome(config.dataDir),

@@ -442,7 +442,7 @@
       return (
         <GlassCard className="mb-6 animate-in" delay={130}>
           <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-5">
-            <SectionHeader title="Start-up Company Audit" subtitle="Company -> CEO -> Project Groups -> Roles -> Sidecar Flywheel" icon="◉" />
+            <SectionHeader title="Start-up Company Audit" subtitle="Company -> CEO -> Project Groups -> Roles -> AiTeam Flywheel" icon="◉" />
             <div className="text-right">
               <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Operating Model</div>
               <div className="text-sm text-slate-300">{report.company_layer?.operating_model || 'unknown'}</div>
@@ -1032,7 +1032,7 @@
       return (
         <GlassCard className="mb-6 animate-in" delay={420}>
           <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-5">
-            <SectionHeader title="Startup Audit" subtitle="规则 + 对话 -> Sidecar 结构化审计 JSON" icon="◆" />
+            <SectionHeader title="Startup Audit" subtitle="规则 + 对话 -> AiTeam 结构化审计 JSON" icon="◆" />
             <div className="text-center">
               <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Total</div>
               <div className={`text-3xl font-bold font-mono ${scoreClass((report.total_score || 0) / 100)}`}>{report.total_score}</div>
@@ -1104,7 +1104,7 @@
               </div>
 
               <div className="rounded-xl border border-white/5 bg-white/[0.015] p-4">
-                <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-3 font-medium">Sidecar Flywheel</div>
+                <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-3 font-medium">AiTeam Flywheel</div>
                 <div className="space-y-2">
                   {(report.sidecar_findings?.recommended_interventions || []).slice(0, 3).map((item, i) => (
                     <div key={i} className="text-sm text-slate-300 bg-white/[0.02] border border-white/5 rounded-lg px-3 py-2">{item}</div>
@@ -1734,8 +1734,8 @@
                 <span className="text-sm">◈</span>
               </div>
               <div>
-                <div className="text-sm font-semibold text-slate-200">AI Team</div>
-                <div className="text-[10px] text-slate-600">Sidecar</div>
+                <div className="text-sm font-semibold text-slate-200">AiTeam</div>
+                <div className="text-[10px] text-slate-600">AiTeam</div>
               </div>
             </div>
           </div>

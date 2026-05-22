@@ -74,7 +74,7 @@ export function buildOrganizationAudit(projects: ProjectOrganizationInput[], dor
     focus_score: focusScore,
     dora_score: dora,
     company_layer: {
-      structure: 'Start-up Company -> CEO/Founder -> Project Groups -> Project Roles -> Sidecar Audit -> Rule Feedback Flywheel',
+      structure: 'Start-up Company -> CEO/Founder -> Project Groups -> Project Roles -> AiTeam Audit -> Rule Feedback Flywheel',
       project_count: projects.length,
       total_sessions: sum(projects.map(project => project.session_count)),
       total_episodes: sum(projects.map(project => project.total_episodes)),
@@ -268,7 +268,7 @@ function deriveFounderFeedback(projects: ProjectOrganizationInput[]): string[] {
   if (scoreFocus(projects) < 75) feedback.push('减少并行项目和反复切换，把接下来 1-2 个会话集中在最高商业价值项目。');
   if (pct(avg(projects.map(project => project.management_report.input_quality_score))) < 60) feedback.push('每次需求先写清 P0、目标用户、痛点、验收标准和不做什么。');
   if (scoreCapitalEfficiency(projects) < 60) feedback.push('为高 token 会话设置停止条件：超过阈值必须先总结决策，再继续执行。');
-  if (feedback.length === 0) feedback.push('保持 CEO 输入质量和收口节奏，把 Sidecar 规则反馈作为每轮迭代的门禁。');
+  if (feedback.length === 0) feedback.push('保持 CEO 输入质量和收口节奏，把 AiTeam 规则反馈作为每轮迭代的门禁。');
   return feedback;
 }
 
@@ -288,7 +288,7 @@ function deriveCompanyInterventions(projects: ProjectOrganizationInput[], scores
   if (scores.capitalEfficiency < 65) interventions.push('建立资源门禁：Top token 会话必须输出决策摘要、剩余风险和继续/停止理由。');
   if (scores.executionVelocity < 65) interventions.push('建立执行门禁：每轮只允许一个最小可验证动作，完成验证后再扩范围。');
   if (scores.focusScore < 75) interventions.push('建立组合门禁：同一周期最多 1 个主项目 + 1 个旁路项目，避免创业早期注意力稀释。');
-  if (projects.some(project => project.startup_audit.rule_feedback)) interventions.push('把 Sidecar 建议进入 Rule Feedback Queue，人工接受后写回项目 md 规则。');
+  if (projects.some(project => project.startup_audit.rule_feedback)) interventions.push('把 AiTeam 建议进入 Rule Feedback Queue，人工接受后写回项目 md 规则。');
   return interventions.slice(0, 6);
 }
 

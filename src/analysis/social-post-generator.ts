@@ -122,7 +122,7 @@ export function generateXiaohongshuPost(
 
   // Footer
   lines.push('---');
-  lines.push('🤖 Solo Founder | AI Team Sidecar');
+  lines.push('🤖 Solo Founder | AiTeam');
   lines.push('#buildinpublic #独立开发者 #AI编程 #soloFounder');
 
   const content = lines.join('\n');
