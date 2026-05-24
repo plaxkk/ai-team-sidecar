@@ -1,8 +1,6 @@
 import express from 'express';
 import { getDb } from '../collector/db.js';
-import { syncCodexSessions } from '../collector/codex-sync.js';
 import { aggregateSessionMetrics } from '../analysis/metrics.js';
-import { runAnalysis } from '../analysis/engine.js';
 import { generateCeoReport, generateCeoReportFromDb } from '../analysis/ceo-report.js';
 import { buildProjectManagementReport, getLatestProjectManagementReport, ProjectManagementReport } from '../analysis/project-report.js';
 import { auditStartupProject } from '../analysis/startup-auditor.js';
@@ -23,12 +21,20 @@ const PORT = Number(process.env.PORT) || CONFIG.dashboardPort;
 
 const app = express();
 app.use(express.json({ limit: '1mb' }));
-app.use(express.static(path.resolve(import.meta.dirname, 'public')));
+app.use(express.static(path.resolve(import.meta.dirname, 'public'), {
+  etag: true,
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.js')) {
+      res.setHeader('Cache-Control', 'public, max-age=600');
+      return;
+    }
+    res.setHeader('Cache-Control', 'no-cache');
+  },
+}));
 
 // Overview metrics
 app.get('/api/overview', (_req, res) => {
   const db = getDb();
-  syncCodexSessions(db);
   const sessions = db.prepare('SELECT session_id FROM sessions').all() as { session_id: string }[];
   const episodes = db.prepare('SELECT flow_score, handoff_score, req_score, overall_score, violations FROM episodes').all() as Array<{ flow_score: number; handoff_score: number; req_score: number; overall_score: number; violations: string }>;
   const projects = getProjectRows(db);
@@ -47,15 +53,27 @@ app.get('/api/overview', (_req, res) => {
 // Project list
 app.get('/api/projects', (_req, res) => {
   const db = getDb();
-  syncCodexSessions(db);
   res.json(getProjectRows(db));
 });
 
 // Company-level startup operating audit.
 app.get('/api/company-audit', async (_req, res) => {
   const db = getDb();
-  syncCodexSessions(db);
   res.json(buildCompanyAuditReport(db));
+});
+
+app.get('/api/sync-status', (_req, res) => {
+  const db = getDb();
+  const rows = db.prepare(
+    `SELECT source, last_started_at, last_finished_at, last_error,
+            imported_sessions, skipped_sessions, pending_sessions, analyzed_sessions
+     FROM collector_status
+     ORDER BY source`
+  ).all();
+  res.json({
+    generated_at: Date.now(),
+    rows,
+  });
 });
 
 // Session list
@@ -72,7 +90,7 @@ app.get('/api/episodes', async (req, res) => {
   const db = getDb();
   const sessionId = req.query.session_id as string;
   const projectPath = req.query.project_path as string;
-  if (projectPath) await syncCodexForProject(db, projectPath, true);
+  const limit = clampLimit(req.query.limit, 500);
 
   let episodes;
   if (projectPath) {
@@ -81,16 +99,17 @@ app.get('/api/episodes', async (req, res) => {
        FROM episodes e
        JOIN sessions s ON s.session_id = e.session_id
        WHERE s.cwd = ?
-       ORDER BY s.started_at DESC, e.start_turn`
-    ).all(projectPath);
+       ORDER BY s.started_at DESC, e.start_turn
+       LIMIT ?`
+    ).all(projectPath, limit);
   } else if (sessionId) {
     episodes = db.prepare(
-      'SELECT * FROM episodes WHERE session_id = ? ORDER BY start_turn'
-    ).all(sessionId);
+      'SELECT * FROM episodes WHERE session_id = ? ORDER BY start_turn LIMIT ?'
+    ).all(sessionId, limit);
   } else {
     episodes = db.prepare(
-      'SELECT * FROM episodes ORDER BY id DESC'
-    ).all();
+      'SELECT * FROM episodes ORDER BY id DESC LIMIT ?'
+    ).all(limit);
   }
   res.json(episodes);
 });
@@ -144,7 +163,6 @@ app.get('/api/role-evaluations', async (req, res) => {
   const db = getDb();
   const sessionId = req.query.session_id as string;
   const projectPath = req.query.project_path as string;
-  if (projectPath) await syncCodexForProject(db, projectPath, true);
 
   const sessionIds = projectPath ? getSessionIdsForProject(db, projectPath) : sessionId ? [sessionId] : [];
   if (sessionIds.length === 0) {
@@ -248,7 +266,6 @@ app.get('/api/ceo-report', async (req, res) => {
   const db = getDb();
   const sessionId = req.query.session_id as string;
   const projectPath = req.query.project_path as string;
-  if (projectPath) await syncCodexForProject(db, projectPath, true);
 
   if (!sessionId && !projectPath) {
     res.status(400).json({ error: 'session_id or project_path required' });
@@ -293,7 +310,6 @@ app.get('/api/project-management-report', async (req, res) => {
   const db = getDb();
   const sessionId = req.query.session_id as string;
   const projectPath = req.query.project_path as string;
-  if (projectPath) await syncCodexForProject(db, projectPath, true);
 
   if (!sessionId && !projectPath) {
     res.status(400).json({ error: 'session_id or project_path required' });
@@ -318,7 +334,6 @@ app.get('/api/project-resource-report', async (req, res) => {
     return;
   }
 
-  await syncCodexForProject(db, projectPath, true);
   res.json(buildProjectResourceReport(db, projectPath));
 });
 
@@ -332,7 +347,6 @@ app.get('/api/startup-audit', async (req, res) => {
     return;
   }
 
-  await syncCodexForProject(db, projectPath, true);
   res.json(buildStartupAuditReport(db, projectPath));
 });
 
@@ -346,7 +360,6 @@ app.get('/api/execution-review', async (req, res) => {
     return;
   }
 
-  await syncCodexForProject(db, projectPath, true);
   res.json(buildExecutionReviewReport(db, projectPath));
 });
 
@@ -360,7 +373,6 @@ app.get('/api/rule-feedback', async (req, res) => {
     return;
   }
 
-  await syncCodexForProject(db, projectPath, true);
   const audit = buildStartupAuditReport(db, projectPath) as any;
   const feedback = audit.rule_feedback || {};
   res.json({
@@ -618,14 +630,10 @@ app.listen(PORT, () => {
   console.log(`[dashboard] Running at http://localhost:${PORT}`);
 });
 
-async function syncCodexForProject(db: ReturnType<typeof getDb>, projectPath: string, analyze: boolean) {
-  const result = syncCodexSessions(db, { projectPath });
-  if (!analyze) return result;
-
-  for (const sessionId of result.analysis_session_ids) {
-    await runAnalysis(db, sessionId);
-  }
-  return result;
+function clampLimit(value: unknown, fallback: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.min(Math.floor(parsed), 500);
 }
 
 function safeJsonParse<T>(str: string, fallback: T): T {

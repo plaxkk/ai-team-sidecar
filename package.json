@@ -20,7 +20,8 @@
   "private": false,
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "npm run build:dashboard && tsc",
+    "build:dashboard": "esbuild src/dashboard/public/app.jsx --jsx-factory=React.createElement --jsx-fragment=React.Fragment --format=iife --target=es2018 --minify --outfile=src/dashboard/public/app.js",
     "setup": "node --loader ts-node/esm bin/setup.ts",
     "install:claude-hooks": "node --loader ts-node/esm bin/install-claude-hooks.ts",
     "doctor": "node --loader ts-node/esm bin/doctor.ts",
@@ -41,6 +42,7 @@
     "@types/better-sqlite3": "^7.6.12",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.0",
+    "esbuild": "^0.28.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.0",
     "vitest": "^4.1.6"

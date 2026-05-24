@@ -42,23 +42,33 @@ export async function runAnalysis(db: Database.Database, sessionId: string) {
   const episodes = groupEpisodes(turns);
 
   // 3. Analyze each episode
-  const upsertEpisode = db.prepare(`
+  const findEpisode = db.prepare(
+    `SELECT id FROM episodes
+     WHERE session_id = ? AND start_turn = ? AND end_turn = ?
+     ORDER BY id
+     LIMIT 1`
+  );
+  const insertEpisode = db.prepare(`
     INSERT INTO episodes (session_id, start_turn, end_turn, episode_type, user_requirement, flow_score, handoff_score, req_score, overall_score, violations, prompt_score, delivery_score)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT DO UPDATE SET
-      flow_score = excluded.flow_score,
-      handoff_score = excluded.handoff_score,
-      req_score = excluded.req_score,
-      overall_score = excluded.overall_score,
-      violations = excluded.violations,
-      prompt_score = excluded.prompt_score,
-      delivery_score = excluded.delivery_score
+  `);
+  const updateEpisode = db.prepare(`
+    UPDATE episodes
+    SET episode_type = ?,
+        user_requirement = ?,
+        flow_score = ?,
+        handoff_score = ?,
+        req_score = ?,
+        overall_score = ?,
+        violations = ?,
+        prompt_score = ?,
+        delivery_score = ?
+    WHERE id = ?
   `);
 
-  // Delete derived analysis rows for this session and re-insert.
+  // Refresh derived analysis rows while preserving episode ids used by checkpoints.
   db.prepare('DELETE FROM project_reports WHERE session_id = ?').run(sessionId);
   db.prepare('DELETE FROM role_evaluations WHERE session_id = ?').run(sessionId);
-  db.prepare('DELETE FROM episodes WHERE session_id = ?').run(sessionId);
 
   // Accumulate prompt/delivery data for CEO report
   let totalPromptScore = 0;
@@ -109,21 +119,42 @@ export async function runAnalysis(db: Database.Database, sessionId: string) {
       deliveryDetailsAcc[k].push(v);
     }
 
-    const result = upsertEpisode.run(
+    const existingEpisode = findEpisode.get(
       sessionId,
       episode.start_turn,
-      episode.end_turn,
-      episode.episode_type,
-      episode.user_requirement,
-      metrics.flow_score,
-      metrics.handoff_score,
-      metrics.req_score,
-      metrics.overall_score,
-      JSON.stringify(flowResult.violations),
-      promptEval.score,
-      deliveryEval.score
-    );
-    const episodeId = Number(result.lastInsertRowid);
+      episode.end_turn
+    ) as { id: number } | undefined;
+    const episodeId = existingEpisode
+      ? Number(existingEpisode.id)
+      : Number(insertEpisode.run(
+          sessionId,
+          episode.start_turn,
+          episode.end_turn,
+          episode.episode_type,
+          episode.user_requirement,
+          metrics.flow_score,
+          metrics.handoff_score,
+          metrics.req_score,
+          metrics.overall_score,
+          JSON.stringify(flowResult.violations),
+          promptEval.score,
+          deliveryEval.score
+        ).lastInsertRowid);
+
+    if (existingEpisode) {
+      updateEpisode.run(
+        episode.episode_type,
+        episode.user_requirement,
+        metrics.flow_score,
+        metrics.handoff_score,
+        metrics.req_score,
+        metrics.overall_score,
+        JSON.stringify(flowResult.violations),
+        promptEval.score,
+        deliveryEval.score,
+        episodeId
+      );
+    }
 
     // 4. Role evaluations for this episode
     const roleEvals = evaluateAllRoles(firstPrompt, fullResponse);

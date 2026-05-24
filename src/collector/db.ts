@@ -226,6 +226,17 @@ function initSchema(db: Database.Database) {
       created_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS collector_status (
+      source TEXT PRIMARY KEY,
+      last_started_at INTEGER,
+      last_finished_at INTEGER,
+      last_error TEXT,
+      imported_sessions INTEGER DEFAULT 0,
+      skipped_sessions INTEGER DEFAULT 0,
+      pending_sessions INTEGER DEFAULT 0,
+      analyzed_sessions INTEGER DEFAULT 0
+    );
+
     CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id);
     CREATE INDEX IF NOT EXISTS idx_events_type ON events(event_type);
     CREATE INDEX IF NOT EXISTS idx_turns_session ON turns(session_id);
